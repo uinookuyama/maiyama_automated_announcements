@@ -62,6 +62,8 @@
 <body>
 
     <div class="theme-switch-container">
+        <button id="backBtn" style="background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; font-size: 14px; font-weight: bold; margin-right: 5px;">戻る</button>
+        <button id="stopBtn" style="background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; font-size: 14px; font-weight: bold; margin-right: 5px;">停止</button>
         <button id="themeToggleBtn" onclick="toggleTheme()">ライトモードに切り替え</button>
     </div>
 
@@ -82,7 +84,7 @@
                 <option value="express">特急</option>
             </select>
         </div>
-        <div class="control-group">
+       <div class="control-group">
             <label for="originSelect">始発駅:</label>
             <select id="originSelect"></select>
         </div>
@@ -90,7 +92,7 @@
             <label for="destSelect">終着駅:</label>
             <select id="destSelect"></select>
         </div>
-        <button class="btn-ready" onclick="setRoute()">この設定で放送を準備する</button>
+       <button class="btn-ready" onclick="setRoute()">この設定で放送を準備する</button>
     </div>
 
     <div class="panel">
@@ -132,7 +134,7 @@
                 { id: "sanya", name: "山谷", nameEn: "Sanya", number: "T11", type: { local: true, rapid: false, express: false }, terminal: false, defaultDoor: "left", fixedDoor: true },
                 { id: "ohi", name: "大日古部", nameEn: "Ohi/Furube", number: "T12", type: { local: true, rapid: false, express: false }, terminal: true, defaultDoor: "left" },
                 { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false }, terminal: true, defaultDoor: "right", fixedDoor: true },
-                { id: "wattsu", name: "輪厚", nameEn: "Wattsu", number: "T14", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" }
+               { id: "wattsu", name: "輪厚", nameEn: "Wattsu", number: "T14", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" }
             ],
             horiri: [
                 { id: "horiri_h", name: "堀理", nameEn: "Horiri", number: "H08", type: { local: true }, terminal: true, defaultDoor: "left" },
@@ -192,7 +194,7 @@
             }
 
             const currentType = typeSelect.value;
-            originSelect.innerHTML = "";
+           originSelect.innerHTML = "";
             destSelect.innerHTML = "";
 
             stationsData[line].forEach(station => {
@@ -502,7 +504,7 @@
             const rightBtn = document.getElementById("doorRightBtn");
             
             leftBtn.style.display = "block";
-            rightBtn.style.display = "block";
+           rightBtn.style.display = "block";
             
             leftBtn.onclick = () => {
                 resetControlButtons();
@@ -525,7 +527,7 @@
             let jpDoorAudio = doorSide === "left" ? "audio/door_left.wav" : "audio/door_right.wav";
             
             let arrText = "";
-            let jpAudioList = [];
+           let jpAudioList = [];
 
             let baseName = st.name;
             let subName = "";
@@ -557,7 +559,7 @@
                 }
 
                 arrText += jpDoorText;
-                jpAudioList.push(jpDoorAudio);
+               jpAudioList.push(jpDoorAudio);
             }
 
             const gapStations = ["shin_maiyama", "yasugo", "horiri", "chibe", "sakuranomori", "nakadai", "wattsu"];
@@ -596,7 +598,7 @@
                     if (audioQueue.length > 0 && typeof audioQueue[0] === 'number') {
                         waitTime = audioQueue.shift();
                     }
-                    playTimeout = setTimeout(playQueue, waitTime);
+                   playTimeout = setTimeout(playQueue, waitTime);
                 };
                 
                 audioPlayer.play().catch(e => {
