@@ -421,12 +421,22 @@
                 ];
                 const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
-                combinedText += "\n\n" + randomPhrase.jpText;
-                if (randomPhrase.enText) combinedText += "\n<span class='en-text'>" + randomPhrase.enText + "</span>";
-                if (randomPhrase.jpAudio) finalAudioList.push(randomPhrase.jpAudio);
-                if (randomPhrase.enAudio) {
-                    finalAudioList.push(1000); 
-                    finalAudioList.push(randomPhrase.enAudio);
+                // ★ 種別ごとに確率を判定して啓発放送を追加するロジック
+                let probability = 0.3; // デフォルト（普通列車：30%）
+                if (type === 'express') {
+                    probability = 1.0; // 特急列車：100%（毎回流す）
+                } else if (type === 'rapid') {
+                    probability = 0.5; // 快速列車：50%（2駅に1回）
+                }
+
+                if (Math.random() < probability) {
+                    combinedText += "\n\n" + randomPhrase.jpText;
+                    if (randomPhrase.enText) combinedText += "\n<span class='en-text'>" + randomPhrase.enText + "</span>";
+                    if (randomPhrase.jpAudio) finalAudioList.push(randomPhrase.jpAudio);
+                    if (randomPhrase.enAudio) {
+                        finalAudioList.push(1000); 
+                        finalAudioList.push(randomPhrase.enAudio);
+                    }
                 }
 
                 currentPlaylist.push({ type: 'audio', text: combinedText, audio: finalAudioList });
@@ -456,7 +466,6 @@
                     document.getElementById("display").innerHTML = currentData.text; 
                     audioQueue = [...currentData.audio];
                     
-                    // ★ ここを 1000ミリ秒 に戻しました
                     playTimeout = setTimeout(playQueue, 1000);
                     
                     document.getElementById("nextBtn").innerText = "次の放送を再生";
@@ -480,7 +489,6 @@
             audioQueue = [...audios];
             document.getElementById("display").innerHTML = "【選択放送】<br>" + text;
             
-            // ★ ここを 1000ミリ秒 に戻しました
             playTimeout = setTimeout(playQueue, 1000);
         }
 
@@ -561,7 +569,6 @@
             document.getElementById("display").innerHTML = arrText;
             audioQueue = [...jpAudioList];
             
-            // ★ ここを 1000ミリ秒 に戻しました
             playTimeout = setTimeout(playQueue, 1000);
 
             const btn = document.getElementById("nextBtn");
