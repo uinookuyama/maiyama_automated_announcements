@@ -98,7 +98,7 @@
         
         <div style="position: absolute; top: 15px; right: 20px; display: flex; gap: 8px;">
             <button id="backBtn" onclick="goBack()" style="padding: 6px 12px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">戻る</button>
-            <button id="stopBtn" onclick="stopAudio()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">停止</button>
+            <button id="stopBtn" onclick="handleStop()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">停止</button>
         </div>
 
         <div id="display">設定を行ってください</div>
@@ -154,13 +154,14 @@
 
         let currentPlaylist = [];
         let currentIndex = 0;
+        let activePlaylistIndex = 0; // ★追加：現在再生（処理）中のインデックスを記憶する変数
         let audioPlayer = new Audio();
         let audioQueue = [];
         let currentRouteStops = [];
         let currentLine = ""; 
         let playTimeout = null; 
 
-        // ★追加した機能：停止処理
+        // 音声とタイマーを止める内部基本処理
         function stopAudio() {
             clearTimeout(playTimeout);
             audioPlayer.pause();
@@ -169,7 +170,23 @@
             audioPlayer.onended = null;
         }
 
-        // ★追加した機能：1つ前に戻す処理
+        // ★修正・追加機能：停止ボタンが押されたときの処理
+        function handleStop() {
+            stopAudio(); // 音声を停止
+            currentIndex = activePlaylistIndex; // 進行状況を、今止めた放送の最初に戻す
+            
+            resetControlButtons(); // ドア方向選択ボタンが出ていれば非表示にする
+            
+            const nextBtn = document.getElementById("nextBtn");
+            if (currentIndex === 0) {
+                nextBtn.innerText = "始発駅案内を再生";
+            } else {
+                nextBtn.innerText = "放送を最初から再生";
+            }
+            nextBtn.disabled = false;
+        }
+
+        // 追加した機能：1つ前に戻す処理
         function goBack() {
             stopAudio();
             if (currentIndex > 1) {
@@ -451,12 +468,11 @@
                 ];
                 const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
-                // ★ 種別ごとに確率を判定して啓発放送を追加するロジック
-                let probability = 0.3; // デフォルト（普通列車：30%）
+                let probability = 0.3; 
                 if (type === 'express') {
-                    probability = 1.0; // 特急列車：100%（毎回流す）
+                    probability = 1.0; 
                 } else if (type === 'rapid') {
-                    probability = 0.5; // 快速列車：50%（2駅に1回）
+                    probability = 0.5; 
                 }
 
                 if (Math.random() < probability) {
@@ -474,6 +490,7 @@
             }
 
             currentIndex = 0;
+            activePlaylistIndex = 0; // ★追加：初期化
             resetControlButtons(); 
             document.getElementById("display").innerHTML = "放送スタンバイ完了<br>（最初のボタンで始発駅案内が流れます）";
             const btn = document.getElementById("nextBtn");
@@ -488,6 +505,8 @@
                 audioPlayer.pause();
                 audioPlayer.currentTime = 0;
                 audioQueue = []; 
+
+                activePlaylistIndex = currentIndex; // ★追加：処理を開始した時点のインデックスを記憶
 
                 const currentData = currentPlaylist[currentIndex];
                 currentIndex++;
