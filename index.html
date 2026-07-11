@@ -96,6 +96,7 @@
     <div class="panel" style="position: relative;">
         <div class="section-title">自動放送ディスプレイ</div>
         
+        <!-- 右上のボタン（停止ボタンの関数を handleStop に変更） -->
         <div style="position: absolute; top: 15px; right: 20px; display: flex; gap: 8px;">
             <button id="backBtn" onclick="goBack()" style="padding: 6px 12px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">戻る</button>
             <button id="stopBtn" onclick="handleStop()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">停止</button>
@@ -468,11 +469,9 @@
                 ];
                 const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
-                let probability = 0.3; 
-                if (type === 'express') {
+                let probability = 0.6; 
+                if (type === 'express' || type === 'rapid') {
                     probability = 1.0; 
-                } else if (type === 'rapid') {
-                    probability = 0.5; 
                 }
 
                 if (Math.random() < probability) {
