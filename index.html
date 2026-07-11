@@ -90,13 +90,19 @@
             <label for="destSelect">終着駅:</label>
             <select id="destSelect"></select>
         </div>
+        <div class="control-group">
+            <label for="mannerModeSelect">啓発放送:</label>
+            <select id="mannerModeSelect">
+                <option value="auto">自動で流れるモード</option>
+                <option value="manual">手動でのみ流れるモード</option>
+            </select>
+        </div>
         <button class="btn-ready" onclick="setRoute()">この設定で放送を準備する</button>
     </div>
 
     <div class="panel" style="position: relative;">
         <div class="section-title">自動放送ディスプレイ</div>
         
-        <!-- 右上のボタン（停止ボタンの関数を handleStop に変更） -->
         <div style="position: absolute; top: 15px; right: 20px; display: flex; gap: 8px;">
             <button id="backBtn" onclick="goBack()" style="padding: 6px 12px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">戻る</button>
             <button id="stopBtn" onclick="handleStop()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">停止</button>
@@ -150,19 +156,28 @@
             ]
         };
 
+        const facilityData = {
+            maiyama: { text: "舞山市役所はこちらです。", audio: "audio/fac_maiyama.wav" },
+            yasugo: { text: "恒心学園はこちらです。", audio: "audio/fac_yasugo.wav" },
+            horiri: { text: "堀理市役所はこちらです。", audio: "audio/fac_horiri.wav" },
+            horiri_h: { text: "堀理市役所はこちらです。", audio: "audio/fac_horiri.wav" },
+            sanya: { text: "堀理県立医療センターはこちらです。", audio: "audio/fac_sanya.wav" },
+            nakadai: { text: "成修大学はこちらです。", audio: "audio/fac_nakadai.wav" },
+            wattsu: { text: "鳩山税務署はこちらです。", audio: "audio/fac_wattsu.wav" }
+        };
+
         const lineEnMap = { tozai: "Tozai Line", horiri: "Horiri Line" };
         const typeEnMap = { local: "Local", rapid: "Rapid", express: "Express" };
 
         let currentPlaylist = [];
         let currentIndex = 0;
-        let activePlaylistIndex = 0; // ★追加：現在再生（処理）中のインデックスを記憶する変数
+        let activePlaylistIndex = 0; 
         let audioPlayer = new Audio();
         let audioQueue = [];
         let currentRouteStops = [];
         let currentLine = ""; 
         let playTimeout = null; 
 
-        // 音声とタイマーを止める内部基本処理
         function stopAudio() {
             clearTimeout(playTimeout);
             audioPlayer.pause();
@@ -171,12 +186,11 @@
             audioPlayer.onended = null;
         }
 
-        // ★修正・追加機能：停止ボタンが押されたときの処理
         function handleStop() {
-            stopAudio(); // 音声を停止
-            currentIndex = activePlaylistIndex; // 進行状況を、今止めた放送の最初に戻す
+            stopAudio(); 
+            currentIndex = activePlaylistIndex; 
             
-            resetControlButtons(); // ドア方向選択ボタンが出ていれば非表示にする
+            resetControlButtons(); 
             
             const nextBtn = document.getElementById("nextBtn");
             if (currentIndex === 0) {
@@ -187,7 +201,6 @@
             nextBtn.disabled = false;
         }
 
-        // 追加した機能：1つ前に戻す処理
         function goBack() {
             stopAudio();
             if (currentIndex > 1) {
@@ -267,6 +280,7 @@
             const typeSelect = document.getElementById("typeSelect");
             const originSelect = document.getElementById("originSelect");
             const destSelect = document.getElementById("destSelect");
+            const mannerMode = document.getElementById("mannerModeSelect").value;
 
             const line = lineSelect.value;
             const type = typeSelect.value;
@@ -441,6 +455,12 @@
                     jpAudioList.push("audio/transfer_tozai.wav");
                 }
 
+                // 施設案内（日本語部分ラスト）
+                if (facilityData[st.id]) {
+                    jpText += facilityData[st.id].text;
+                    jpAudioList.push(facilityData[st.id].audio);
+                }
+
                 let combinedText = jpText + "\n<span class='en-text'>" + enText + "</span>";
                 let finalAudioList = [...jpAudioList, 1000, ...enAudioList];
 
@@ -462,19 +482,39 @@
                     finalAudioList.push(adJpAudio);
                 }
 
-                const randomPhrases = [
-                    { jpText: "この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。", enText: "Please offer your seat to those who may need it.", jpAudio: "audio/manual_priority.wav", enAudio: "audio/manual_priority_en.wav" },
-                    { jpText: "お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。", enText: "Please set your mobile phone to silent mode, and refrain from talking on the phone.", jpAudio: "audio/manual_manners.wav", enAudio: "audio/manual_manners_en.wav" },
-                    { jpText: "お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
-                ];
-                const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+                // 追加の共通広告（順不同で2つ連続、確率は種別問わず60%、啓発放送の一つ前）
+                if (Math.random() < 0.6) {
+                    let ad1Text = "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。";
+                    let ad1Audio = ["audio/ad_at_audio.wav"];
+                    if (st.id === "yasugo") {
+                        ad1Text += "MT安小ウルトラアリーナは次です。";
+                        ad1Audio.push("audio/ad_mt_arena.wav");
+                    }
+                    let ad2Text = "専門スタッフが丁寧にサポート、地域最安値のワッツデンキは、東西線の池ノ上駅と中台駅からすぐです。";
+                    let ad2Audio = ["audio/ad_wattsu_denki.wav"];
 
-                let probability = 0.6; 
-                if (type === 'express' || type === 'rapid') {
-                    probability = 1.0; 
+                    let commonAds = [
+                        { text: ad1Text, audio: ad1Audio },
+                        { text: ad2Text, audio: ad2Audio }
+                    ];
+                    if (Math.random() < 0.5) {
+                        commonAds.reverse();
+                    }
+                    commonAds.forEach(ad => {
+                        combinedText += "\n\n" + ad.text;
+                        finalAudioList.push(...ad.audio);
+                    });
                 }
 
-                if (Math.random() < probability) {
+                // 啓発放送の処理（自動モード時は普通列車を含め全種別で100%流す）
+                if (mannerMode === "auto") {
+                    const randomPhrases = [
+                        { jpText: "この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。", enText: "Please offer your seat to those who may need it.", jpAudio: "audio/manual_priority.wav", enAudio: "audio/manual_priority_en.wav" },
+                        { jpText: "お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。", enText: "Please set your mobile phone to silent mode, and refrain from talking on the phone.", jpAudio: "audio/manual_manners.wav", enAudio: "audio/manual_manners_en.wav" },
+                        { jpText: "お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
+                    ];
+                    const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+
                     combinedText += "\n\n" + randomPhrase.jpText;
                     if (randomPhrase.enText) combinedText += "\n<span class='en-text'>" + randomPhrase.enText + "</span>";
                     if (randomPhrase.jpAudio) finalAudioList.push(randomPhrase.jpAudio);
@@ -489,7 +529,7 @@
             }
 
             currentIndex = 0;
-            activePlaylistIndex = 0; // ★追加：初期化
+            activePlaylistIndex = 0; 
             resetControlButtons(); 
             document.getElementById("display").innerHTML = "放送スタンバイ完了<br>（最初のボタンで始発駅案内が流れます）";
             const btn = document.getElementById("nextBtn");
@@ -505,7 +545,7 @@
                 audioPlayer.currentTime = 0;
                 audioQueue = []; 
 
-                activePlaylistIndex = currentIndex; // ★追加：処理を開始した時点のインデックスを記憶
+                activePlaylistIndex = currentIndex; 
 
                 const currentData = currentPlaylist[currentIndex];
                 currentIndex++;
