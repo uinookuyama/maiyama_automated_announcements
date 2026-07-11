@@ -43,6 +43,8 @@
         .manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
         .btn-manual { background-color: #d39e00; color: #ffffff; font-weight: bold; padding: 12px; }
         .btn-manual:hover { background-color: #b78a02; }
+        .btn-manner { background-color: #28a745; }
+        .btn-manner:hover { background-color: #1e7e34; }
         .section-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #444; padding-bottom: 5px; margin-bottom: 15px; color: #ffffff; transition: color 0.3s, border-color 0.3s; }
 
         /* テーマ切り替えボタンのスタイル */
@@ -118,12 +120,18 @@
 
     <div class="panel">
         <div class="section-title">選択放送（いつでも再生可能）</div>
-        <div class="manual-grid">
+        <div class="manual-grid" id="manualGrid">
             <button class="btn-manual" onclick="playManual('当駅では、後続列車の待避を行うため、しばらく停車いたします。発車までお待ちください。\n<span class=\'en-text\'>We will be stopping here for a moment to let another train pass.</span>', ['audio/manual_waiting.wav', 1000, 'audio/manual_waiting_en.wav'])">待避</button>
             <button class="btn-manual" onclick="playManual('お客様にお知らせいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
             <button class="btn-manual" onclick="playManual('お客様にお知らせいたします。この電車は当駅止まりです。引き続きのご乗車はできません。お近くのドアからお降りください。\n<span class=\'en-text\'>This is the final destination of this train. Please disembark from the nearest doors.</span>', ['audio/manual_disembark.wav', 1000, 'audio/manual_disembark_en.wav'])">降車促進</button>
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
+            
+            <!-- 手動モード時のみ追加表示される啓発放送 -->
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
         </div>
     </div>
 
@@ -239,6 +247,14 @@
             document.getElementById("doorRightBtn").style.display = "none";
         }
 
+        function updateMannerButtons() {
+            const mode = document.getElementById("mannerModeSelect").value;
+            const mannerItems = document.querySelectorAll(".manner-manual-item");
+            mannerItems.forEach(item => {
+                item.style.display = (mode === "manual") ? "block" : "none";
+            });
+        }
+
         function updateForm() {
             const line = document.getElementById("lineSelect").value;
             const typeSelect = document.getElementById("typeSelect");
@@ -270,7 +286,6 @@
                 }
             });
             
-            // 堀理線を選択時はデフォルトを「江坂野」始発、「堀理」行きに設定する
             if (destSelect.options.length > 0) {
                 if (line === "horiri") {
                     originSelect.value = "ezakano";
@@ -462,7 +477,6 @@
                     jpAudioList.push("audio/transfer_tozai.wav");
                 }
 
-                // 施設案内（日本語部分ラスト）
                 if (facilityData[st.id]) {
                     jpText += facilityData[st.id].text;
                     jpAudioList.push(facilityData[st.id].audio);
@@ -471,22 +485,18 @@
                 let combinedText = jpText + "\n<span class='en-text'>" + enText + "</span>";
                 let finalAudioList = [...jpAudioList, 1000, ...enAudioList];
 
-                // --- 広告放送の統合・2枠生成ロジック ---
                 let stationAds = [];
-                // 汎用広告（全駅で流れる可能性がある候補）
                 const generalAds = [
                     { id: "at", text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。", audio: ["audio/ad_at_audio.wav"] },
                     { id: "wattsu", text: "専門スタッフが丁寧にサポート、地域最安値のワッツデンキは、東西線の池ノ上駅と中台駅からすぐです。", audio: ["audio/ad_wattsu_denki.wav"] }
                 ];
 
-                // 特定の駅でのみ選ばれる広告
                 let specificAd = null;
                 if (st.id === "yasugo") {
                     specificAd = {
                         id: "yasugo_special",
                         text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。MT安小ウルトラアリーナは次です。",
-                        audio: ["audio/ad_at_audio.wav", "audio/ad_mt_arena.wav"],
-                        excludeId: "at" // 汎用版のAT音響との重複防止
+                        audio: ["audio/ad_at_audio.wav", "audio/ad_mt_arena.wav"]
                     };
                 } else if (st.id === "shin_maiyama") {
                     specificAd = { id: "shin_maiyama_sp", text: "インプラントのほーり歯科へおいでの方は、次でお降りください。", audio: ["audio/ad_shin_maiyama.wav"] };
@@ -497,17 +507,14 @@
                 }
 
                 if (specificAd) {
-                    // 特定駅広告が選ばれた際は、重複しない他の汎用広告からランダムに1つ選んで合計2枠を形成する
-                    const availableGeneralAds = generalAds.filter(ad => ad.id !== specificAd.excludeId);
-                    const randomGeneralAd = availableGeneralAds[Math.floor(Math.random() * availableGeneralAds.length)];
-                    stationAds = [specificAd, randomGeneralAd];
-                    // 自然な放送順になるよう順序をシャッフル（順不同）
-                    if (Math.random() < 0.5) {
-                        stationAds.reverse();
+                    stationAds.push(specificAd);
+                    if (st.id !== "yasugo" && Math.random() < 0.3) {
+                        const availableGeneralAds = generalAds.filter(ad => ad.id !== specificAd.excludeId);
+                        const randomGeneralAd = availableGeneralAds[Math.floor(Math.random() * availableGeneralAds.length)];
+                        stationAds.push(randomGeneralAd);
                     }
                 } else {
-                    // 上記以外の駅では、60%の確率で汎用広告（2枠）を順不同で再生
-                    if (Math.random() < 0.6) {
+                    if (Math.random() < 0.3) {
                         stationAds = [...generalAds];
                         if (Math.random() < 0.5) {
                             stationAds.reverse();
@@ -515,13 +522,11 @@
                     }
                 }
 
-                // 決定した広告リストをテキストと音声 queue に結合
                 stationAds.forEach(ad => {
                     combinedText += "\n\n" + ad.text;
                     finalAudioList.push(...ad.audio);
                 });
 
-                // 啓発放送の処理（自動モード時は普通列車を含め全種別で100%流す）
                 if (mannerMode === "auto") {
                     const randomPhrases = [
                         { jpText: "この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。", enText: "Please offer your seat to those who may need it.", jpAudio: "audio/manual_priority.wav", enAudio: "audio/manual_priority_en.wav" },
@@ -542,6 +547,8 @@
                 currentPlaylist.push({ type: 'audio', text: combinedText, audio: finalAudioList });
                 currentPlaylist.push({ type: 'track_select', station: st, isLast: isLast });
             }
+
+            updateMannerButtons();
 
             currentIndex = 0;
             activePlaylistIndex = 0; 
