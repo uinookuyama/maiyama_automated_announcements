@@ -7,11 +7,12 @@
         /* デフォルト（ダークモード）の基本スタイル */
         body { font-family: sans-serif; padding: 20px; background-color: #121212; color: #e0e0e0; transition: background-color 0.3s, color 0.3s; }
         .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: background-color 0.3s, box-shadow 0.3s; }
-        .control-group { margin-bottom: 15px; }
+        .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         label { display: inline-block; width: 100px; font-weight: bold; color: #ffffff; transition: color 0.3s; }
         select { padding: 5px; font-size: 16px; min-width: 150px; background-color: #2d2d2d; color: #ffffff; border: 1px solid #444; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; border: none; }
         .btn-ready { background-color: #218838; color: white; margin-top: 10px; }
+        .btn-swap { padding: 6px 12px; font-size: 14px; background-color: #5a6268; color: white; font-weight: bold; }
         
         #display { 
             font-size: 22px; 
@@ -86,11 +87,18 @@
         </div>
         <div class="control-group">
             <label for="originSelect">始発駅:</label>
-            <select id="originSelect"></select>
+            <select id="originSelect" onchange="updateAfterArrivalOptions()"></select>
+            <button class="btn-swap" type="button" onclick="swapStations()">⇅ 反転</button>
         </div>
         <div class="control-group">
             <label for="destSelect">終着駅:</label>
-            <select id="destSelect"></select>
+            <select id="destSelect" onchange="updateAfterArrivalOptions()"></select>
+        </div>
+        <div class="control-group" id="afterArrivalGroup" style="display: flex;">
+            <label for="afterArrivalSelect">到着後の運用:</label>
+            <select id="afterArrivalSelect">
+                <!-- Javascriptで動的に生成 -->
+            </select>
         </div>
         <div class="control-group">
             <label for="mannerModeSelect">啓発放送:</label>
@@ -127,7 +135,6 @@
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
             
-            <!-- 手動モード時のみ追加表示される啓発放送 -->
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
@@ -152,7 +159,7 @@
                 { id: "horiri", name: "堀理", nameEn: "Horiri", number: "T10", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" },
                 { id: "sanya", name: "山谷", nameEn: "Sanya", number: "T11", type: { local: true, rapid: false, express: false }, terminal: false, defaultDoor: "left", fixedDoor: true },
                 { id: "ohi", name: "大日古部", nameEn: "Ohi/Furube", number: "T12", type: { local: true, rapid: false, express: false }, terminal: true, defaultDoor: "left" },
-                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false }, terminal: true, defaultDoor: "right", fixedDoor: true },
+                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false }, terminal: false, defaultDoor: "right", fixedDoor: true },
                 { id: "wattsu", name: "輪厚", nameEn: "Wattsu", number: "T14", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" }
             ],
             horiri: [
@@ -185,6 +192,10 @@
         let currentRouteStops = [];
         let currentLine = ""; 
         let playTimeout = null; 
+
+        // 運行状態のグローバル変数
+        let globalIsUpbound = true;
+        let globalAfterArrival = "kaisou";
 
         function stopAudio() {
             clearTimeout(playTimeout);
@@ -295,6 +306,59 @@
                     destSelect.selectedIndex = destSelect.options.length - 1;
                 }
             }
+
+            updateAfterArrivalOptions();
+        }
+
+        function swapStations() {
+            const originSelect = document.getElementById("originSelect");
+            const destSelect = document.getElementById("destSelect");
+            
+            const temp = originSelect.value;
+            originSelect.value = destSelect.value;
+            destSelect.value = temp;
+
+            updateAfterArrivalOptions();
+        }
+
+        function updateAfterArrivalOptions() {
+            const line = document.getElementById("lineSelect").value;
+            const originId = document.getElementById("originSelect").value;
+            const destId = document.getElementById("destSelect").value;
+            const select = document.getElementById("afterArrivalSelect");
+
+            // 現在の選択値を保持
+            const currentVal = select.value;
+            select.innerHTML = "";
+
+            // 1. 回送列車とする
+            select.add(new Option("回送列車とする", "kaisou"));
+
+            const stations = stationsData[line];
+            const originIndex = stations.findIndex(s => s.id === originId);
+            const destIndex = stations.findIndex(s => s.id === destId);
+            const isUpbound = originIndex < destIndex;
+
+            // 2. 折り返す
+            let canTurnaround = true;
+            if (line === "tozai" && !isUpbound && ["yasugo", "megama", "horiri", "ohi"].includes(destId)) {
+                canTurnaround = false;
+            }
+            if (canTurnaround) {
+                select.add(new Option("折り返す", "turnaround"));
+            }
+
+            // 3. 同方面の別種別として引き続き運転
+            if (destId !== "maiyama" && destId !== "wattsu") {
+                select.add(new Option("同方面の別種別として引き続き運転", "continue"));
+            }
+
+            // 可能な場合は元の選択を復元
+            if (Array.from(select.options).some(opt => opt.value === currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = "kaisou";
+            }
         }
 
         function setRoute() {
@@ -318,13 +382,6 @@
             const originIndex = stations.findIndex(s => s.id === originId);
             const destIndex = stations.findIndex(s => s.id === destId);
 
-            if (line === "tozai" && originIndex > destIndex) {
-                const invalidDests = ["yasugo", "megama", "horiri", "ohi"];
-                if (invalidDests.includes(destId)) {
-                    alert("【注意】配線の都合上、輪厚方面からその駅での折り返し（終着）設定は本来できませんが、特例としてこのまま設定を続行します。");
-                }
-            }
-
             const isUpbound = originIndex < destIndex;
             const startIndex = Math.min(originIndex, destIndex);
             const endIndex = Math.max(originIndex, destIndex);
@@ -340,6 +397,8 @@
             }
 
             currentLine = line;
+            globalIsUpbound = isUpbound;
+            globalAfterArrival = document.getElementById("afterArrivalSelect").value;
 
             const lineName = lineSelect.options[lineSelect.selectedIndex].text;
             const lineEn = lineEnMap[line];
@@ -647,12 +706,68 @@
                 arrText = `${baseName}、${baseName}${subName}、終点です。`;
                 jpAudioList.push(`audio/arr_end_${st.id}.wav`);
                 
-                if (line === "horiri" && st.id === "horiri_h") {
-                    arrText += "東西線はお乗り換えです。";
-                    jpAudioList.push("audio/transfer_tozai.wav");
-                } else if (line === "tozai" && st.id === "horiri") {
-                    arrText += "堀理線はお乗り換えです。";
-                    jpAudioList.push("audio/transfer_horiri.wav");
+                let transferAdded = false;
+
+                // 舞山行と輪厚行以外であれば、選択肢「同方面の別種別として引き続き運転」以外を選択した場合に乗換放送を流す
+                const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu") && (globalAfterArrival !== "continue");
+
+                if (line === "tozai" && playTransfer) {
+                    if (st.id === "yasugo") {
+                        if (globalIsUpbound) {
+                            arrText += "芽蒲・輪厚方面は、お乗り換えです。";
+                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_wattsu.wav");
+                        } else {
+                            arrText += "舞山方面は、お乗り換えです。";
+                            jpAudioList.push("audio/transfer_maiyama.wav");
+                        }
+                        transferAdded = true;
+                    } else if (st.id === "megama") {
+                        if (globalIsUpbound) {
+                            arrText += "堀理・輪厚方面は、お乗り換えです。";
+                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
+                        } else {
+                            arrText += "舞山方面は、お乗り換えです。";
+                            jpAudioList.push("audio/transfer_maiyama.wav");
+                        }
+                        transferAdded = true;
+                    } else if (st.id === "natsu") {
+                        if (globalIsUpbound) {
+                            arrText += "堀理・輪厚方面は、お乗り換えです。";
+                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
+                        } else {
+                            arrText += "芽蒲・舞山方面は、お乗り換えです。";
+                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama.wav");
+                        }
+                        transferAdded = true;
+                    } else if (st.id === "horiri") {
+                        if (globalIsUpbound) {
+                            arrText += "輪厚方面と、堀理線はお乗り換えです。";
+                            jpAudioList.push("audio/transfer_wattsu_and.wav", 150, "audio/transfer_horiri.wav");
+                        } else {
+                            arrText += "芽蒲・舞山方面と、堀理線はお乗り換えです。";
+                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama_and.wav", 150, "audio/transfer_horiri.wav");
+                        }
+                        transferAdded = true;
+                    } else if (st.id === "ohi") {
+                        if (globalIsUpbound) {
+                            arrText += "輪厚方面は、お乗り換えです。";
+                            jpAudioList.push("audio/transfer_wattsu.wav");
+                        } else {
+                            arrText += "堀理・舞山方面は、お乗り換えです。";
+                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_maiyama.wav");
+                        }
+                        transferAdded = true;
+                    }
+                }
+
+                if (!transferAdded) {
+                    if (line === "horiri" && st.id === "horiri_h") {
+                        arrText += "東西線はお乗り換えです。";
+                        jpAudioList.push("audio/transfer_tozai.wav");
+                    } else if (line === "tozai" && st.id === "horiri") {
+                        arrText += "堀理線はお乗り換えです。";
+                        jpAudioList.push("audio/transfer_horiri.wav");
+                    }
                 }
                 
                 arrText += "本日も、舞山市交通局をご利用くださいまして、ありがとうございました。お忘れ物のないよう、ご注意ください。" + jpDoorText;
