@@ -423,7 +423,7 @@
                 canTurnaround = false;
             }
             if (canTurnaround) {
-                select.add(new Option("折り返す", "turnaround"));
+                select.add(new Option("折り返す/引き続き同方面の別種別として運転する", "turnaround"));
             }
 
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
