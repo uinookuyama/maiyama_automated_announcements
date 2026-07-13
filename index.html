@@ -60,10 +60,6 @@
 
         .stop-checkboxes { display: flex; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin-top: 10px; }
         .stop-checkbox-item { display: flex; align-items: center; gap: 4px; font-size: 14px; }
-        
-        .dyn-setup-box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #666; display: inline-block; }
-        body.light-mode .dyn-setup-box { background: #f0f0f0; border: 1px solid #ccc; }
-        .dyn-setup-box select { margin: 0 10px; }
     </style>
 </head>
 <body>
@@ -145,7 +141,7 @@
         <div class="section-title">選択放送（いつでも再生可能）</div>
         <div class="manual-grid" id="manualGrid">
             <button class="btn-manual" onclick="playManual('当駅では、後続列車の待避を行うため、しばらく停車いたします。発車までお待ちください。\n<span class=\'en-text\'>We will be stopping here for a moment to let another train pass.</span>', ['audio/manual_waiting.wav', 1000, 'audio/manual_waiting_en.wav'])">待避</button>
-            <button class="btn-manual" onclick="playManual('お客様にお知らせいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
+            <button class="btn-manual" onclick="playManual('お客様にお願いいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
             <button class="btn-manual" onclick="playManual('お客様にお知らせいたします。この電車は当駅止まりです。引き続きのご乗車はできません。お近くのドアからお降りください。\n<span class=\'en-text\'>This is the final destination of this train. Please disembark from the nearest doors.</span>', ['audio/manual_disembark.wav', 1000, 'audio/manual_disembark_en.wav'])">降車促進</button>
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
@@ -210,7 +206,6 @@
 
         let globalIsUpbound = true;
         let globalAfterArrival = "kaisou";
-        let nextTrainData = null; 
 
         function stopAudio() {
             clearTimeout(playTimeout);
@@ -431,10 +426,6 @@
                 select.add(new Option("折り返す", "turnaround"));
             }
 
-            if (destId !== "maiyama" && destId !== "wattsu") {
-                select.add(new Option("同方面の別種別として引き続き運転", "continue"));
-            }
-
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
                 select.value = currentVal;
             } else {
@@ -485,7 +476,6 @@
             currentLine = line;
             globalIsUpbound = isUpbound;
             globalAfterArrival = document.getElementById("afterArrivalSelect").value;
-            nextTrainData = null; 
 
             const lineName = lineSelect.options[lineSelect.selectedIndex].text;
             const lineEn = lineEnMap[line];
@@ -545,7 +535,7 @@
                     intermediateStops.forEach(st => {
                         stopNames.push(st.name);
                         stopNamesEn.push(st.nameEn);
-                        jpAudio.push(`audio/stop_${st.id}.wav`, 250); 
+                        jpAudioList.push(`audio/stop_${st.id}.wav`, 250); 
                         enAudio.push(`audio/stop_${st.id}_en.wav`, 250); 
                     });
                     
@@ -710,92 +700,9 @@
             playTimeout = setTimeout(playQueue, 1000);
         }
 
-        window.updateDynDest = function(stId) {
-            const destSelect = document.getElementById("dynDest");
-            const typeSelect = document.getElementById("dynType");
-            if (!destSelect || !typeSelect) return;
-            
-            const line = currentLine;
-            const isUpbound = globalIsUpbound;
-            destSelect.innerHTML = "";
-            
-            const stations = stationsData[line];
-            const currentIndex = stations.findIndex(s => s.id === stId);
-            const currentType = typeSelect.value;
-            
-            let validDests = [];
-            if (isUpbound) {
-                for (let i = currentIndex + 1; i < stations.length; i++) {
-                    if (stations[i].terminal && stations[i].type[currentType]) {
-                        validDests.push(stations[i]);
-                    }
-                }
-            } else {
-                for (let i = currentIndex - 1; i >= 0; i--) {
-                    if (stations[i].terminal && stations[i].type[currentType]) {
-                        validDests.push(stations[i]);
-                    }
-                }
-            }
-            
-            validDests.forEach(st => {
-                const opt = document.createElement("option");
-                opt.value = st.id;
-                opt.text = st.name;
-                destSelect.appendChild(opt);
-            });
-            
-            if (validDests.length === 0) {
-                const opt = document.createElement("option");
-                opt.value = "";
-                opt.text = "設定不可";
-                destSelect.appendChild(opt);
-            }
-        }
-
-        function saveDynamicSelection() {
-            if (document.getElementById("dynType") && document.getElementById("dynDest")) {
-                const tSel = document.getElementById("dynType");
-                const dSel = document.getElementById("dynDest");
-                
-                const typeVal = tSel.value;
-                const typeEn = typeEnMap[typeVal] || typeVal;
-                
-                const destVal = dSel.value;
-                let destEn = "";
-                const st = stationsData[currentLine].find(s => s.id === destVal);
-                if (st) {
-                    destEn = st.nameEn;
-                }
-
-                nextTrainData = {
-                    typeVal: typeVal,
-                    typeText: tSel.options[tSel.selectedIndex].text,
-                    typeEn: typeEn,
-                    destVal: destVal,
-                    destText: dSel.options[dSel.selectedIndex] ? dSel.options[dSel.selectedIndex].text : "",
-                    destEn: destEn
-                };
-            }
-        }
-
         function showTrackSelection(st, isLast) {
             let html = `【設定・選択】\nまもなく ${st.name} に到着します。\n`;
-            let isContinue = (isLast && globalAfterArrival === "continue");
             
-            if (isContinue) {
-                html += `\n<div class="dyn-setup-box">
-                    <label style="width: auto;">引き続き運転する種別:</label>
-                    <select id="dynType" onchange="updateDynDest('${st.id}')">
-                        <option value="local">普通</option>
-                        <option value="rapid">快速</option>
-                        <option value="express">特急</option>
-                    </select>
-                    <label style="width: auto; margin-left: 10px;">行先:</label>
-                    <select id="dynDest"></select>
-                </div>\n`;
-            }
-
             if (st.fixedDoor) {
                 html += `\n下のボタンから放送を再生してください。`;
             } else {
@@ -804,10 +711,6 @@
 
             document.getElementById("display").innerHTML = html;
             
-            if (isContinue) {
-                updateDynDest(st.id);
-            }
-
             document.getElementById("nextBtn").style.display = "none";
             
             const leftBtn = document.getElementById("doorLeftBtn");
@@ -817,7 +720,6 @@
             if (st.fixedDoor) {
                 fixedBtn.style.display = "block";
                 fixedBtn.onclick = () => {
-                    if (isContinue) saveDynamicSelection();
                     resetControlButtons();
                     playArrival(st, isLast, st.defaultDoor);
                 };
@@ -826,13 +728,11 @@
                 rightBtn.style.display = "block";
                 
                 leftBtn.onclick = () => {
-                    if (isContinue) saveDynamicSelection();
                     resetControlButtons();
                     playArrival(st, isLast, "left");
                 };
                 
                 rightBtn.onclick = () => {
-                    if (isContinue) saveDynamicSelection();
                     resetControlButtons();
                     playArrival(st, isLast, "right");
                 };
@@ -860,7 +760,7 @@
                 jpAudioList.push(`audio/arr_end_${st.id}.wav`);
                 
                 let transferAdded = false;
-                const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu") && (globalAfterArrival !== "continue");
+                const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu");
 
                 if (line === "tozai" && playTransfer) {
                     if (st.id === "yasugo") {
@@ -924,20 +824,6 @@
                 arrText += "本日も、舞山市交通局をご利用くださいまして、ありがとうございました。お忘れ物のないよう、ご注意ください。" + jpDoorText;
                 jpAudioList.push("audio/end_fixed.wav", jpDoorAudio);
 
-                if (globalAfterArrival === "kaisou") {
-                    arrText += "\n\nなお、到着後は回送列車となりますので、どなたさまもお降りくださいますようお願いいたします。";
-                    jpAudioList.push("audio/after_kaisou.wav");
-                } else if (globalAfterArrival === "continue" && nextTrainData && nextTrainData.destVal !== "") {
-                    arrText += `\n\nなお、到着後は${nextTrainData.typeText}、${nextTrainData.destText}行となります。当駅より先へおいでのお客様は、ご乗車のままお待ちください。`;
-                    jpAudioList.push(
-                        "audio/after_continue_prefix.wav", 
-                        `audio/type_${nextTrainData.typeVal}.wav`, 
-                        `audio/stop_${nextTrainData.destVal}.wav`, 
-                        50, 
-                        "audio/after_continue_suffix.wav"
-                    );
-                }
-
             } else {
                 arrText = `${baseName}、${baseName}${subName}。`;
                 jpAudioList.push(`audio/arr_${st.id}.wav`);
@@ -955,6 +841,11 @@
             if (gapStations.includes(st.id)) {
                 arrText += "電車とホームの間が広く空いている所がありますので、お降りになる際は、足元にご注意ください。";
                 jpAudioList.push("audio/mind_the_gap.wav");
+            }
+
+            if (isLast && globalAfterArrival === "kaisou") {
+                arrText += "\n\nなお、到着後は回送列車となりますので、どなたさまもお降りくださいますようお願いいたします。";
+                jpAudioList.push("audio/after_kaisou.wav");
             }
 
             document.getElementById("display").innerHTML = arrText;
