@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <title>車内自動放送装置</title>
     <style>
-        /* デフォルト（ダークモード）の基本スタイル */
         body { font-family: sans-serif; padding: 20px; background-color: #121212; color: #e0e0e0; transition: background-color 0.3s, color 0.3s; }
         .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: background-color 0.3s, box-shadow 0.3s; }
-        .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         label { display: inline-block; width: 100px; font-weight: bold; color: #ffffff; transition: color 0.3s; }
         select { padding: 5px; font-size: 16px; min-width: 150px; background-color: #2d2d2d; color: #ffffff; border: 1px solid #444; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; border: none; }
@@ -23,7 +22,7 @@
             border-radius: 8px; 
             text-align: left; 
             margin-bottom: 20px; 
-            height: 360px;          
+            height: 400px;          
             overflow-y: auto;       
             line-height: 1.6; 
             white-space: pre-wrap; 
@@ -48,11 +47,9 @@
         .btn-manner:hover { background-color: #1e7e34; }
         .section-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #444; padding-bottom: 5px; margin-bottom: 15px; color: #ffffff; transition: color 0.3s, border-color 0.3s; }
 
-        /* テーマ切り替えボタンのスタイル */
         .theme-switch-container { text-align: right; margin-bottom: 15px; }
         #themeToggleBtn { background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; font-size: 14px; font-weight: bold; transition: all 0.3s; }
 
-        /* ライトモード用のスタイル定義 */
         body.light-mode { background-color: #f4f6f9; color: #333333; }
         body.light-mode .panel { background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         body.light-mode label { color: #333333; }
@@ -60,6 +57,13 @@
         body.light-mode .section-title { color: #333333; border-bottom: 2px solid #ccc; }
         body.light-mode #display { background: #ffffff; color: #111111; border: 2px solid #ddd; }
         body.light-mode .en-text { color: #006600; }
+
+        .stop-checkboxes { display: flex; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin-top: 10px; }
+        .stop-checkbox-item { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+        
+        .dyn-setup-box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #666; display: inline-block; }
+        body.light-mode .dyn-setup-box { background: #f0f0f0; border: 1px solid #ccc; }
+        .dyn-setup-box select { margin: 0 10px; }
     </style>
 </head>
 <body>
@@ -83,21 +87,31 @@
                 <option value="local">普通</option>
                 <option value="rapid">快速</option>
                 <option value="express">特急</option>
+                <option value="extra">臨時</option>
             </select>
         </div>
         <div class="control-group">
             <label for="originSelect">始発駅:</label>
-            <select id="originSelect" onchange="updateAfterArrivalOptions()"></select>
+            <select id="originSelect" onchange="handleStationChange()"></select>
             <button class="btn-swap" type="button" onclick="swapStations()">⇅ 反転</button>
         </div>
         <div class="control-group">
             <label for="destSelect">終着駅:</label>
-            <select id="destSelect" onchange="updateAfterArrivalOptions()"></select>
+            <select id="destSelect" onchange="handleStationChange()"></select>
         </div>
+
+        <!-- 臨時列車用の途中停車駅選択エリア -->
+        <div class="control-group" id="extraStopsGroup" style="display: none; align-items: flex-start;">
+            <label>途中停車駅:</label>
+            <div style="flex: 1;">
+                <div style="font-size: 14px; margin-bottom: 5px;">※始発駅と終着駅の間の停車駅を手動で選択してください。</div>
+                <div class="stop-checkboxes" id="extraStopsContainer"></div>
+            </div>
+        </div>
+
         <div class="control-group" id="afterArrivalGroup" style="display: flex;">
             <label for="afterArrivalSelect">到着後の運用:</label>
             <select id="afterArrivalSelect">
-                <!-- Javascriptで動的に生成 -->
             </select>
         </div>
         <div class="control-group">
@@ -123,6 +137,7 @@
             <button id="nextBtn" class="btn-play" onclick="playNext()" disabled>次の放送を再生</button>
             <button id="doorLeftBtn" class="btn-play btn-door-left" style="display: none;">到着放送を再生（左側）</button>
             <button id="doorRightBtn" class="btn-play btn-door-right" style="display: none;">到着放送を再生（右側）</button>
+            <button id="playFixedArrBtn" class="btn-play btn-door-right" style="display: none;">到着放送を再生</button>
         </div>
     </div>
 
@@ -176,13 +191,13 @@
             yasugo: { text: "恒心学園はこちらです。", audio: "audio/fac_yasugo.wav" },
             horiri: { text: "堀理市役所はこちらです。", audio: "audio/fac_horiri.wav" },
             horiri_h: { text: "堀理市役所はこちらです。", audio: "audio/fac_horiri.wav" },
-            ohi: { text: "堀理県立総合医療センターはこちらです。", audio: "audio/fac_ohi.wav" },
+            ohi: { text: "堀理県立医療センターはこちらです。", audio: "audio/fac_ohi.wav" },
             nakadai: { text: "成修大学はこちらです。", audio: "audio/fac_nakadai.wav" },
             wattsu: { text: "鳩山税務署はこちらです。", audio: "audio/fac_wattsu.wav" }
         };
 
         const lineEnMap = { tozai: "Tozai Line", horiri: "Horiri Line" };
-        const typeEnMap = { local: "Local", rapid: "Rapid", express: "Express" };
+        const typeEnMap = { local: "Local", rapid: "Rapid", express: "Express", extra: "Extra" };
 
         let currentPlaylist = [];
         let currentIndex = 0;
@@ -193,9 +208,9 @@
         let currentLine = ""; 
         let playTimeout = null; 
 
-        // 運行状態のグローバル変数
         let globalIsUpbound = true;
         let globalAfterArrival = "kaisou";
+        let nextTrainData = null; 
 
         function stopAudio() {
             clearTimeout(playTimeout);
@@ -256,6 +271,7 @@
             document.getElementById("nextBtn").style.display = "block";
             document.getElementById("doorLeftBtn").style.display = "none";
             document.getElementById("doorRightBtn").style.display = "none";
+            document.getElementById("playFixedArrBtn").style.display = "none";
         }
 
         function updateMannerButtons() {
@@ -275,16 +291,25 @@
             if (line === "horiri") {
                 typeSelect.value = "local";
                 typeSelect.disabled = true;
+                Array.from(typeSelect.options).forEach(opt => {
+                    if(opt.value === "extra") opt.style.display = "none";
+                });
             } else {
                 typeSelect.disabled = false;
+                Array.from(typeSelect.options).forEach(opt => {
+                    opt.style.display = "block";
+                });
             }
 
             const currentType = typeSelect.value;
+            
+            const filterType = currentType === "extra" ? "local" : currentType;
+            
             originSelect.innerHTML = "";
             destSelect.innerHTML = "";
 
             stationsData[line].forEach(station => {
-                if (station.terminal && station.type[currentType]) {
+                if (station.terminal && station.type[filterType]) {
                     const option1 = document.createElement("option");
                     option1.value = station.id;
                     option1.text = station.name;
@@ -307,6 +332,11 @@
                 }
             }
 
+            handleStationChange();
+        }
+        
+        function handleStationChange() {
+            updateExtraStopsCheckboxes();
             updateAfterArrivalOptions();
         }
 
@@ -318,7 +348,63 @@
             originSelect.value = destSelect.value;
             destSelect.value = temp;
 
-            updateAfterArrivalOptions();
+            handleStationChange();
+        }
+
+        function updateExtraStopsCheckboxes() {
+            const type = document.getElementById("typeSelect").value;
+            const group = document.getElementById("extraStopsGroup");
+            const container = document.getElementById("extraStopsContainer");
+            
+            if (type !== "extra") {
+                group.style.display = "none";
+                return;
+            }
+            
+            group.style.display = "flex";
+            container.innerHTML = "";
+            
+            const line = document.getElementById("lineSelect").value;
+            const originId = document.getElementById("originSelect").value;
+            const destId = document.getElementById("destSelect").value;
+            
+            if (originId === destId) return;
+            
+            const stations = stationsData[line];
+            const originIndex = stations.findIndex(s => s.id === originId);
+            const destIndex = stations.findIndex(s => s.id === destId);
+            
+            const startIndex = Math.min(originIndex, destIndex);
+            const endIndex = Math.max(originIndex, destIndex);
+            
+            let betweenStations = stations.slice(startIndex + 1, endIndex);
+            if (originIndex > destIndex) betweenStations.reverse();
+            
+            betweenStations.forEach(st => {
+                const div = document.createElement("div");
+                div.className = "stop-checkbox-item";
+                
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.id = "chk_" + st.id;
+                cb.value = st.id;
+                cb.className = "extra-stop-chk";
+                
+                const lbl = document.createElement("label");
+                lbl.htmlFor = "chk_" + st.id;
+                lbl.innerText = st.name;
+                lbl.style.width = "auto";
+                lbl.style.cursor = "pointer";
+                lbl.style.color = "inherit";
+                
+                div.appendChild(cb);
+                div.appendChild(lbl);
+                container.appendChild(div);
+            });
+            
+            if (betweenStations.length === 0) {
+                container.innerHTML = "<span style='font-size:14px;color:#999;'>※選択可能な途中駅がありません</span>";
+            }
         }
 
         function updateAfterArrivalOptions() {
@@ -327,11 +413,9 @@
             const destId = document.getElementById("destSelect").value;
             const select = document.getElementById("afterArrivalSelect");
 
-            // 現在の選択値を保持
             const currentVal = select.value;
             select.innerHTML = "";
 
-            // 1. 回送列車とする
             select.add(new Option("回送列車とする", "kaisou"));
 
             const stations = stationsData[line];
@@ -339,7 +423,6 @@
             const destIndex = stations.findIndex(s => s.id === destId);
             const isUpbound = originIndex < destIndex;
 
-            // 2. 折り返す
             let canTurnaround = true;
             if (line === "tozai" && !isUpbound && ["yasugo", "megama", "horiri", "ohi"].includes(destId)) {
                 canTurnaround = false;
@@ -348,12 +431,10 @@
                 select.add(new Option("折り返す", "turnaround"));
             }
 
-            // 3. 同方面の別種別として引き続き運転
             if (destId !== "maiyama" && destId !== "wattsu") {
                 select.add(new Option("同方面の別種別として引き続き運転", "continue"));
             }
 
-            // 可能な場合は元の選択を復元
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
                 select.value = currentVal;
             } else {
@@ -389,9 +470,14 @@
             let routeStations = stations.slice(startIndex, endIndex + 1);
             if (!isUpbound) routeStations.reverse();
 
-            currentRouteStops = routeStations.filter(s => s.type[type]);
+            if (type === "extra") {
+                const checkedIds = Array.from(document.querySelectorAll('.extra-stop-chk:checked')).map(cb => cb.value);
+                currentRouteStops = routeStations.filter(s => s.id === originId || s.id === destId || checkedIds.includes(s.id));
+            } else {
+                currentRouteStops = routeStations.filter(s => s.type[type]);
+            }
             
-            if (type !== "local" && routeStations.length === currentRouteStops.length) {
+            if (type !== "local" && routeStations.length === currentRouteStops.length && type !== "extra") {
                 alert("選択された区間には通過駅が存在しません。普通列車を選択してください。");
                 return;
             }
@@ -399,6 +485,7 @@
             currentLine = line;
             globalIsUpbound = isUpbound;
             globalAfterArrival = document.getElementById("afterArrivalSelect").value;
+            nextTrainData = null; 
 
             const lineName = lineSelect.options[lineSelect.selectedIndex].text;
             const lineEn = lineEnMap[line];
@@ -412,6 +499,7 @@
 
             let infoAudio = line === "horiri" ? `audio/info_${line}_${destId}.wav` : `audio/info_${line}_${type}_${destId}.wav`;
             let infoAudioEn = line === "horiri" ? `audio/info_${line}_${destId}_en.wav` : `audio/info_${line}_${type}_${destId}_en.wav`;
+            
             let infoText = line === "horiri" ? `この電車は、${lineName}、${destName}行きです。` : `この電車は、${lineName}、${typeName}、${destName}行きです。`;
             let infoTextEn = line === "horiri" ? `This is the ${lineEn} train bound for ${destEn}. ` : `This is the ${lineEn}, ${typeEn} service bound for ${destEn}. `;
 
@@ -429,18 +517,8 @@
                     preDepText += `当駅を出ますと、次は終点、${finalStop.name}です。発車まで、しばらくお待ちください。`;
                     preDepTextEn += `After leaving this station, the next stop is the terminal, ${finalStop.nameEn}. We will be departing shortly.`;
                     
-                    jpAudio.push(
-                        "audio/after_leaving.wav", 150, 
-                        "audio/next.wav", 150,
-                        `audio/stops_end_${finalStop.id}.wav`, 600, 
-                        "audio/wait_departure.wav"
-                    );
-                    enAudio.push(
-                        "audio/after_leaving_en.wav", 150, 
-                        "audio/next_en.wav", 150,
-                        `audio/stop_${finalStop.id}_en.wav`, 600, 
-                        "audio/wait_departure_en.wav"
-                    );
+                    jpAudio.push("audio/after_leaving.wav", 150, "audio/next.wav", 150, `audio/stops_end_${finalStop.id}.wav`, 600, "audio/wait_departure.wav");
+                    enAudio.push("audio/after_leaving_en.wav", 150, "audio/next_en.wav", 150, `audio/stop_${finalStop.id}_en.wav`, 600, "audio/wait_departure_en.wav");
                 } else {
                     preDepText += "終点まで、各駅に止まります。発車まで、しばらくお待ちください。";
                     preDepTextEn += "This train will stop at all stations. We will be departing shortly.";
@@ -474,15 +552,8 @@
                     preDepText += stopNames.join("、") + `、終点、${finalStop.name}です。発車まで、しばらくお待ちください。`;
                     preDepTextEn += stopNamesEn.join(", ") + `, and the terminal, ${finalStop.nameEn}. We will be departing shortly.`;
                     
-                    jpAudio.push(
-                        `audio/stops_end_${finalStop.id}.wav`, 600, 
-                        "audio/wait_departure.wav"
-                    );
-                    
-                    enAudio.push(
-                        `audio/stops_end_${finalStop.id}_en.wav`, 600, 
-                        "audio/wait_departure_en.wav"
-                    );
+                    jpAudio.push(`audio/stops_end_${finalStop.id}.wav`, 600, "audio/wait_departure.wav");
+                    enAudio.push(`audio/stops_end_${finalStop.id}_en.wav`, 600, "audio/wait_departure_en.wav");
                 }
             }
             
@@ -510,11 +581,8 @@
                 }
 
                 let displayName = st.name;
-                if (st.id === "megama") {
-                    displayName += "、堀理大学 芽蒲キャンパス前";
-                } else if (st.id === "midoridai") {
-                    displayName += "、笛吹研究学園都市前";
-                }
+                if (st.id === "megama") displayName += "、堀理大学 芽蒲キャンパス前";
+                else if (st.id === "midoridai") displayName += "、笛吹研究学園都市前";
 
                 if (isLast) {
                     jpText += `次は ${displayName}、終点です。`;
@@ -551,19 +619,10 @@
                 ];
 
                 let specificAd = null;
-                if (st.id === "yasugo") {
-                    specificAd = {
-                        id: "yasugo_special",
-                        text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。MT安小ウルトラアリーナは次です。",
-                        audio: ["audio/ad_at_audio.wav", "audio/ad_mt_arena.wav"]
-                    };
-                } else if (st.id === "shin_maiyama") {
-                    specificAd = { id: "shin_maiyama_sp", text: "インプラントのほーり歯科へおいでの方は、次でお降りください。", audio: ["audio/ad_shin_maiyama.wav"] };
-                } else if (st.id === "midoridai") {
-                    specificAd = { id: "midoridai_sp", text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。", audio: ["audio/ad_midoridai.wav"] };
-                } else if (st.id === "ezakano") {
-                    specificAd = { id: "ezakano_sp", text: "江坂野異人町へおいでの方は、こちらが便利です。", audio: ["audio/ad_ezakano.wav"] };
-                }
+                if (st.id === "yasugo") specificAd = { id: "yasugo_special", text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。MT安小ウルトラアリーナは次です。", audio: ["audio/ad_at_audio.wav", "audio/ad_mt_arena.wav"] };
+                else if (st.id === "shin_maiyama") specificAd = { id: "shin_maiyama_sp", text: "インプラントのほーり歯科へおいでの方は、次でお降りください。", audio: ["audio/ad_shin_maiyama.wav"] };
+                else if (st.id === "midoridai") specificAd = { id: "midoridai_sp", text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。", audio: ["audio/ad_midoridai.wav"] };
+                else if (st.id === "ezakano") specificAd = { id: "ezakano_sp", text: "江坂野異人町へおいでの方は、こちらが便利です。", audio: ["audio/ad_ezakano.wav"] };
 
                 if (specificAd) {
                     stationAds.push(specificAd);
@@ -575,9 +634,7 @@
                 } else {
                     if (Math.random() < 0.3) {
                         stationAds = [...generalAds];
-                        if (Math.random() < 0.5) {
-                            stationAds.reverse();
-                        }
+                        if (Math.random() < 0.5) stationAds.reverse();
                     }
                 }
 
@@ -609,7 +666,6 @@
             }
 
             updateMannerButtons();
-
             currentIndex = 0;
             activePlaylistIndex = 0; 
             resetControlButtons(); 
@@ -628,26 +684,19 @@
                 audioQueue = []; 
 
                 activePlaylistIndex = currentIndex; 
-
                 const currentData = currentPlaylist[currentIndex];
                 currentIndex++;
 
                 if (currentData.type === 'audio') {
                     document.getElementById("display").innerHTML = currentData.text; 
                     audioQueue = [...currentData.audio];
-                    
                     playTimeout = setTimeout(playQueue, 1000);
-                    
                     document.getElementById("nextBtn").innerText = "次の放送を再生";
                 } else if (currentData.type === 'track_select') {
-                    if (currentData.station.fixedDoor) {
-                        playArrival(currentData.station, currentData.isLast, currentData.station.defaultDoor);
-                    } else {
-                        showTrackSelection(currentData.station, currentData.isLast);
-                    }
+                    showTrackSelection(currentData.station, currentData.isLast);
                 }
             } else {
-                document.getElementById("display").innerHTML = "終点です。ご乗車ありがとうございました。<br><span class='en-text'>We have arrived at the terminal. Thank you.</span>";
+                document.getElementById("display").innerHTML = "終点です。ご乗車ありがとうございました。";
                 document.getElementById("nextBtn").disabled = true;
             }
         }
@@ -658,31 +707,136 @@
             audioPlayer.currentTime = 0;
             audioQueue = [...audios];
             document.getElementById("display").innerHTML = "【選択放送】<br>" + text;
-            
             playTimeout = setTimeout(playQueue, 1000);
         }
 
+        window.updateDynDest = function(stId) {
+            const destSelect = document.getElementById("dynDest");
+            const typeSelect = document.getElementById("dynType");
+            if (!destSelect || !typeSelect) return;
+            
+            const line = currentLine;
+            const isUpbound = globalIsUpbound;
+            destSelect.innerHTML = "";
+            
+            const stations = stationsData[line];
+            const currentIndex = stations.findIndex(s => s.id === stId);
+            const currentType = typeSelect.value;
+            
+            let validDests = [];
+            if (isUpbound) {
+                for (let i = currentIndex + 1; i < stations.length; i++) {
+                    if (stations[i].terminal && stations[i].type[currentType]) {
+                        validDests.push(stations[i]);
+                    }
+                }
+            } else {
+                for (let i = currentIndex - 1; i >= 0; i--) {
+                    if (stations[i].terminal && stations[i].type[currentType]) {
+                        validDests.push(stations[i]);
+                    }
+                }
+            }
+            
+            validDests.forEach(st => {
+                const opt = document.createElement("option");
+                opt.value = st.id;
+                opt.text = st.name;
+                destSelect.appendChild(opt);
+            });
+            
+            if (validDests.length === 0) {
+                const opt = document.createElement("option");
+                opt.value = "";
+                opt.text = "設定不可";
+                destSelect.appendChild(opt);
+            }
+        }
+
+        function saveDynamicSelection() {
+            if (document.getElementById("dynType") && document.getElementById("dynDest")) {
+                const tSel = document.getElementById("dynType");
+                const dSel = document.getElementById("dynDest");
+                
+                const typeVal = tSel.value;
+                const typeEn = typeEnMap[typeVal] || typeVal;
+                
+                const destVal = dSel.value;
+                let destEn = "";
+                const st = stationsData[currentLine].find(s => s.id === destVal);
+                if (st) {
+                    destEn = st.nameEn;
+                }
+
+                nextTrainData = {
+                    typeVal: typeVal,
+                    typeText: tSel.options[tSel.selectedIndex].text,
+                    typeEn: typeEn,
+                    destVal: destVal,
+                    destText: dSel.options[dSel.selectedIndex] ? dSel.options[dSel.selectedIndex].text : "",
+                    destEn: destEn
+                };
+            }
+        }
+
         function showTrackSelection(st, isLast) {
-            const displayDiv = document.getElementById("display");
-            displayDiv.innerHTML = `【出口方向の選択】\nまもなく ${st.name} に到着します。\n下のボタンから、開くドアの方向を選択して放送を再生してください。`;
+            let html = `【設定・選択】\nまもなく ${st.name} に到着します。\n`;
+            let isContinue = (isLast && globalAfterArrival === "continue");
+            
+            if (isContinue) {
+                html += `\n<div class="dyn-setup-box">
+                    <label style="width: auto;">引き続き運転する種別:</label>
+                    <select id="dynType" onchange="updateDynDest('${st.id}')">
+                        <option value="local">普通</option>
+                        <option value="rapid">快速</option>
+                        <option value="express">特急</option>
+                    </select>
+                    <label style="width: auto; margin-left: 10px;">行先:</label>
+                    <select id="dynDest"></select>
+                </div>\n`;
+            }
+
+            if (st.fixedDoor) {
+                html += `\n下のボタンから放送を再生してください。`;
+            } else {
+                html += `\n下のボタンから、開くドアの方向を選択して放送を再生してください。`;
+            }
+
+            document.getElementById("display").innerHTML = html;
+            
+            if (isContinue) {
+                updateDynDest(st.id);
+            }
 
             document.getElementById("nextBtn").style.display = "none";
             
             const leftBtn = document.getElementById("doorLeftBtn");
             const rightBtn = document.getElementById("doorRightBtn");
+            const fixedBtn = document.getElementById("playFixedArrBtn");
             
-            leftBtn.style.display = "block";
-            rightBtn.style.display = "block";
-            
-            leftBtn.onclick = () => {
-                resetControlButtons();
-                playArrival(st, isLast, "left");
-            };
-            
-            rightBtn.onclick = () => {
-                resetControlButtons();
-                playArrival(st, isLast, "right");
-            };
+            if (st.fixedDoor) {
+                fixedBtn.style.display = "block";
+                fixedBtn.onclick = () => {
+                    if (isContinue) saveDynamicSelection();
+                    resetControlButtons();
+                    playArrival(st, isLast, st.defaultDoor);
+                };
+            } else {
+                leftBtn.style.display = "block";
+                rightBtn.style.display = "block";
+                
+                leftBtn.onclick = () => {
+                    if (isContinue) saveDynamicSelection();
+                    resetControlButtons();
+                    playArrival(st, isLast, "left");
+                };
+                
+                rightBtn.onclick = () => {
+                    if (isContinue) saveDynamicSelection();
+                    resetControlButtons();
+                    playArrival(st, isLast, "right");
+                };
+            }
         }
 
         function playArrival(st, isLast, doorSide) {
@@ -690,7 +844,6 @@
             audioPlayer.pause();
             
             const line = currentLine;
-            
             let jpDoorText = doorSide === "left" ? "お出口は、左側です。" : "お出口は、右側です。";
             let jpDoorAudio = doorSide === "left" ? "audio/door_left.wav" : "audio/door_right.wav";
             
@@ -707,8 +860,6 @@
                 jpAudioList.push(`audio/arr_end_${st.id}.wav`);
                 
                 let transferAdded = false;
-
-                // 舞山行と輪厚行以外であれば、選択肢「同方面の別種別として引き続き運転」以外を選択した場合に乗換放送を流す
                 const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu") && (globalAfterArrival !== "continue");
 
                 if (line === "tozai" && playTransfer) {
@@ -773,6 +924,20 @@
                 arrText += "本日も、舞山市交通局をご利用くださいまして、ありがとうございました。お忘れ物のないよう、ご注意ください。" + jpDoorText;
                 jpAudioList.push("audio/end_fixed.wav", jpDoorAudio);
 
+                if (globalAfterArrival === "kaisou") {
+                    arrText += "\n\nなお、到着後は回送列車となりますので、どなたさまもお降りくださいますようお願いいたします。";
+                    jpAudioList.push("audio/after_kaisou.wav");
+                } else if (globalAfterArrival === "continue" && nextTrainData && nextTrainData.destVal !== "") {
+                    arrText += `\n\nなお、到着後は${nextTrainData.typeText}、${nextTrainData.destText}行となります。当駅より先へおいでのお客様は、ご乗車のままお待ちください。`;
+                    jpAudioList.push(
+                        "audio/after_continue_prefix.wav", 
+                        `audio/type_${nextTrainData.typeVal}.wav`, 
+                        `audio/stop_${nextTrainData.destVal}.wav`, 
+                        50, 
+                        "audio/after_continue_suffix.wav"
+                    );
+                }
+
             } else {
                 arrText = `${baseName}、${baseName}${subName}。`;
                 jpAudioList.push(`audio/arr_${st.id}.wav`);
@@ -796,7 +961,6 @@
             audioQueue = [...jpAudioList];
             
             playTimeout = setTimeout(playQueue, 1000);
-
             const btn = document.getElementById("nextBtn");
             btn.innerText = "次の放送を再生";
         }
@@ -818,7 +982,6 @@
                 
                 audioPlayer.onended = () => {
                     let waitTime = CONTEXT_GAP; 
-                    
                     if (audioQueue.length > 0 && typeof audioQueue[0] === 'number') {
                         waitTime = audioQueue.shift();
                     }
