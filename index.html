@@ -96,7 +96,6 @@
             <select id="destSelect" onchange="handleStationChange()"></select>
         </div>
 
-        <!-- 臨時列車用の途中停車駅選択エリア -->
         <div class="control-group" id="extraStopsGroup" style="display: none; align-items: flex-start;">
             <label>途中停車駅:</label>
             <div style="flex: 1;">
@@ -422,8 +421,15 @@
             if (line === "tozai" && !isUpbound && ["yasugo", "megama", "horiri", "ohi"].includes(destId)) {
                 canTurnaround = false;
             }
-            if (canTurnaround) {
-                select.add(new Option("折り返す/引き続き同方面の別種別として運転する", "turnaround"));
+
+            const isLineEnd = (destIndex === 0 || destIndex === stations.length - 1);
+
+            if (isLineEnd) {
+                select.add(new Option("折り返す", "turnaround"));
+            } else if (!canTurnaround) {
+                select.add(new Option("引き続き同方面の別種別として運転する", "turnaround"));
+            } else {
+                select.add(new Option("折り返す / 引き続き同方面の別種別として運転する", "turnaround"));
             }
 
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
@@ -535,7 +541,7 @@
                     intermediateStops.forEach(st => {
                         stopNames.push(st.name);
                         stopNamesEn.push(st.nameEn);
-                        jpAudioList.push(`audio/stop_${st.id}.wav`, 250); 
+                        jpAudio.push(`audio/stop_${st.id}.wav`, 250); 
                         enAudio.push(`audio/stop_${st.id}_en.wav`, 250); 
                     });
                     
