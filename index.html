@@ -557,6 +557,8 @@
                 audio: [...jpAudio, 1000, ...enAudio] 
             });
 
+            let hasPlayedAd = false; // 列車全体での広告再生フラグ
+
             for (let i = 1; i < currentRouteStops.length; i++) {
                 let isLast = (i === currentRouteStops.length - 1);
                 let st = currentRouteStops[i];
@@ -618,15 +620,26 @@
                 else if (st.id === "midoridai") specificAd = { id: "midoridai_sp", text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。", audio: ["audio/ad_midoridai.wav"] };
                 else if (st.id === "ezakano") specificAd = { id: "ezakano_sp", text: "江坂野異人町へおいでの方は、こちらが便利です。", audio: ["audio/ad_ezakano.wav"] };
 
-                if (specificAd) {
-                    stationAds.push(specificAd);
-                    if (st.id !== "yasugo" && Math.random() < 0.3) {
-                        const availableGeneralAds = generalAds.filter(ad => ad.id !== specificAd.excludeId);
-                        const randomGeneralAd = availableGeneralAds[Math.floor(Math.random() * availableGeneralAds.length)];
-                        stationAds.push(randomGeneralAd);
-                    }
-                } else {
-                    if (Math.random() < 0.3) {
+                // 広告決定ロジックの修正（頻度50%、最低1セット保証）
+                let shouldPlayAd = false;
+                let remainingChances = currentRouteStops.length - i; // 残りの駅間放送タイミング数
+
+                if (!hasPlayedAd && remainingChances === 1) {
+                    shouldPlayAd = true; // 最終区間でまだ流れていなければ強制再生
+                } else if (Math.random() < 0.5) {
+                    shouldPlayAd = true; // 50%の確率で再生
+                }
+
+                if (shouldPlayAd) {
+                    hasPlayedAd = true;
+                    if (specificAd) {
+                        stationAds.push(specificAd);
+                        if (st.id !== "yasugo" && Math.random() < 0.3) {
+                            const availableGeneralAds = generalAds.filter(ad => ad.id !== specificAd.excludeId);
+                            const randomGeneralAd = availableGeneralAds[Math.floor(Math.random() * availableGeneralAds.length)];
+                            stationAds.push(randomGeneralAd);
+                        }
+                    } else {
                         stationAds = [...generalAds];
                         if (Math.random() < 0.5) stationAds.reverse();
                     }
