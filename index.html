@@ -132,7 +132,6 @@
             <button id="nextBtn" class="btn-play" onclick="playNext()" disabled>次の放送を再生</button>
             <button id="doorLeftBtn" class="btn-play btn-door-left" style="display: none;">到着放送を再生（左側）</button>
             <button id="doorRightBtn" class="btn-play btn-door-right" style="display: none;">到着放送を再生（右側）</button>
-            <button id="playFixedArrBtn" class="btn-play btn-door-right" style="display: none;">到着放送を再生</button>
         </div>
     </div>
 
@@ -148,7 +147,7 @@
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
-            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様におお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
         </div>
     </div>
 
@@ -265,7 +264,6 @@
             document.getElementById("nextBtn").style.display = "block";
             document.getElementById("doorLeftBtn").style.display = "none";
             document.getElementById("doorRightBtn").style.display = "none";
-            document.getElementById("playFixedArrBtn").style.display = "none";
         }
 
         function updateMannerButtons() {
@@ -707,13 +705,13 @@
         }
 
         function showTrackSelection(st, isLast) {
-            let html = `【設定・選択】\nまもなく ${st.name} に到着します。\n`;
-            
             if (st.fixedDoor) {
-                html += `\n下のボタンから放送を再生してください。`;
-            } else {
-                html += `\n下のボタンから、開くドアの方向を選択して放送を再生してください。`;
+                playArrival(st, isLast, st.defaultDoor);
+                return;
             }
+
+            let html = `【設定・選択】\nまもなく ${st.name} に到着します。\n`;
+            html += `\n下のボタンから、開くドアの方向を選択して放送を再生してください。`;
 
             document.getElementById("display").innerHTML = html;
             
@@ -721,28 +719,19 @@
             
             const leftBtn = document.getElementById("doorLeftBtn");
             const rightBtn = document.getElementById("doorRightBtn");
-            const fixedBtn = document.getElementById("playFixedArrBtn");
             
-            if (st.fixedDoor) {
-                fixedBtn.style.display = "block";
-                fixedBtn.onclick = () => {
-                    resetControlButtons();
-                    playArrival(st, isLast, st.defaultDoor);
-                };
-            } else {
-                leftBtn.style.display = "block";
-                rightBtn.style.display = "block";
-                
-                leftBtn.onclick = () => {
-                    resetControlButtons();
-                    playArrival(st, isLast, "left");
-                };
-                
-                rightBtn.onclick = () => {
-                    resetControlButtons();
-                    playArrival(st, isLast, "right");
-                };
-            }
+            leftBtn.style.display = "block";
+            rightBtn.style.display = "block";
+            
+            leftBtn.onclick = () => {
+                resetControlButtons();
+                playArrival(st, isLast, "left");
+            };
+            
+            rightBtn.onclick = () => {
+                resetControlButtons();
+                playArrival(st, isLast, "right");
+            };
         }
 
         function playArrival(st, isLast, doorSide) {
