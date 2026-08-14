@@ -140,14 +140,13 @@
         <div class="manual-grid" id="manualGrid">
             <button class="btn-manual" onclick="playManual('当駅では、後続列車の待避を行うため、しばらく停車いたします。発車までお待ちください。\n<span class=\'en-text\'>We will be stopping here for a moment to let another train pass.</span>', ['audio/manual_waiting.wav', 1000, 'audio/manual_waiting_en.wav'])">待避</button>
             <button class="btn-manual" onclick="playManual('お客様にお願いいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
-            <button class="btn-manual" onclick="playManual('お客様にお知らせいたします。この電車は当駅止まりです。引き続きのご乗車はできません。お近くのドアからお降りください。\n<span class=\'en-text\'>This is the final destination of this train. Please disembark from the nearest doors.</span>', ['audio/manual_disembark.wav', 1000, 'audio/manual_disembark_en.wav'])">降車促進</button>
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
             
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
-            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様におお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
         </div>
     </div>
 
@@ -557,7 +556,7 @@
                 audio: [...jpAudio, 1000, ...enAudio] 
             });
 
-            let hasPlayedAd = false; // 列車全体での広告再生フラグ
+            let hasPlayedAd = false; 
 
             for (let i = 1; i < currentRouteStops.length; i++) {
                 let isLast = (i === currentRouteStops.length - 1);
@@ -620,14 +619,13 @@
                 else if (st.id === "midoridai") specificAd = { id: "midoridai_sp", text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。", audio: ["audio/ad_midoridai.wav"] };
                 else if (st.id === "ezakano") specificAd = { id: "ezakano_sp", text: "江坂野異人町へおいでの方は、こちらが便利です。", audio: ["audio/ad_ezakano.wav"] };
 
-                // 広告決定ロジックの修正（頻度50%、最低1セット保証）
                 let shouldPlayAd = false;
-                let remainingChances = currentRouteStops.length - i; // 残りの駅間放送タイミング数
+                let remainingChances = currentRouteStops.length - i; 
 
                 if (!hasPlayedAd && remainingChances === 1) {
-                    shouldPlayAd = true; // 最終区間でまだ流れていなければ強制再生
+                    shouldPlayAd = true; 
                 } else if (Math.random() < 0.5) {
-                    shouldPlayAd = true; // 50%の確率で再生
+                    shouldPlayAd = true; 
                 }
 
                 if (shouldPlayAd) {
@@ -655,7 +653,7 @@
                         { jpText: "この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。", enText: "Please offer your seat to those who may need it.", jpAudio: "audio/manual_priority.wav", enAudio: "audio/manual_priority_en.wav" },
                         { jpText: "お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。", enText: "Please set your mobile phone to silent mode, and refrain from talking on the phone.", jpAudio: "audio/manual_manners.wav", enAudio: "audio/manual_manners_en.wav" },
                         { jpText: "電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。", enText: "Please hold on to the handrails or straps, as the train may stop suddenly.", jpAudio: "audio/manual_sudden_stop.wav", enAudio: "audio/manual_sudden_stop_en.wav" },
-                        { jpText: "お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
+                        { jpText: "お客様におお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
                     ];
                     const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
@@ -671,6 +669,13 @@
                 currentPlaylist.push({ type: 'audio', text: combinedText, audio: finalAudioList });
                 currentPlaylist.push({ type: 'track_select', station: st, isLast: isLast });
             }
+
+            // 【追加】終着駅案内の次に再生される降車促進放送をプレイリストに追加
+            currentPlaylist.push({
+                type: 'audio',
+                text: "お客様にお知らせいたします。この電車は当駅止まりです。引き続きのご乗車はできません。お近くのドアからお降りください。\n<span class='en-text'>This is the final destination of this train. Please disembark from the nearest doors.</span>",
+                audio: ["audio/manual_disembark.wav", 1000, "audio/manual_disembark_en.wav"]
+            });
 
             updateMannerButtons();
             currentIndex = 0;
@@ -703,7 +708,7 @@
                     showTrackSelection(currentData.station, currentData.isLast);
                 }
             } else {
-                document.getElementById("display").innerHTML = "終点です。ご乗車ありがとうございました。";
+                document.getElementById("display").innerHTML = "すべての放送が終了しました。ご乗車ありがとうございました。";
                 document.getElementById("nextBtn").disabled = true;
             }
         }
