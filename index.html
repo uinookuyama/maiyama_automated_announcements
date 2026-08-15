@@ -146,7 +146,7 @@
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
             <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
-            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
+            <button class="btn-manual btn-manner manner-manual-item" style="display: none;" onclick="playManual('お客様におお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
         </div>
     </div>
 
@@ -167,7 +167,8 @@
                 { id: "horiri", name: "堀理", nameEn: "Horiri", number: "T10", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" },
                 { id: "sanya", name: "山谷", nameEn: "Sanya", number: "T11", type: { local: true, rapid: false, express: false }, terminal: false, defaultDoor: "left", fixedDoor: true },
                 { id: "ohi", name: "大日古部", nameEn: "Ohi/Furube", number: "T12", type: { local: true, rapid: false, express: false }, terminal: true, defaultDoor: "left" },
-                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false }, terminal: false, defaultDoor: "right", fixedDoor: true },
+                // 中台駅のterminalをtrueに変更
+                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false }, terminal: true, defaultDoor: "right", fixedDoor: true },
                 { id: "wattsu", name: "輪厚", nameEn: "Wattsu", number: "T14", type: { local: true, rapid: true, express: true }, terminal: true, defaultDoor: "left" }
             ],
             horiri: [
@@ -415,7 +416,8 @@
             const isUpbound = originIndex < destIndex;
 
             let canTurnaround = true;
-            if (line === "tozai" && !isUpbound && ["yasugo", "megama", "horiri", "ohi"].includes(destId)) {
+            // 安小駅の制限を除外し、中台駅を下り（輪厚方面から）の制限に追加
+            if (line === "tozai" && !isUpbound && ["megama", "horiri", "ohi", "nakadai"].includes(destId)) {
                 canTurnaround = false;
             }
 
@@ -670,7 +672,6 @@
                 currentPlaylist.push({ type: 'track_select', station: st, isLast: isLast });
             }
 
-            // 【追加】終着駅案内の次に再生される降車促進放送をプレイリストに追加
             currentPlaylist.push({
                 type: 'audio',
                 text: "お客様にお知らせいたします。この電車は当駅止まりです。引き続きのご乗車はできません。お近くのドアからお降りください。\n<span class='en-text'>This is the final destination of this train. Please disembark from the nearest doors.</span>",
