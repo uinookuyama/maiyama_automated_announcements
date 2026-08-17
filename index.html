@@ -424,9 +424,10 @@
             if (isLineEnd) {
                 select.add(new Option("折り返す", "turnaround"));
             } else if (!canTurnaround) {
-                select.add(new Option("引き続き同方面の別種別として運転する", "turnaround"));
+                select.add(new Option("引き続き同方面の別種別として運転する", "continue_same_direction"));
             } else {
-                select.add(new Option("折り返す / 引き続き同方面の別種別として運転する", "turnaround"));
+                select.add(new Option("折り返す", "turnaround"));
+                select.add(new Option("引き続き同方面の別種別として運転する", "continue_same_direction"));
             }
 
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
@@ -640,7 +641,6 @@
                             stationAds.push(randomGeneralAd);
                         }
                     } else {
-                        // ランダムに2つ選ぶ処理
                         let shuffledAds = [...generalAds].sort(() => 0.5 - Math.random());
                         stationAds = shuffledAds.slice(0, 2);
                     }
@@ -777,7 +777,7 @@
                 let transferAdded = false;
                 const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu");
 
-                if (line === "tozai" && playTransfer) {
+                if (line === "tozai" && playTransfer && globalAfterArrival !== "continue_same_direction") {
                     if (st.id === "yasugo") {
                         if (globalIsUpbound) {
                             arrText += "芽蒲・輪厚方面は、お乗り換えです。";
