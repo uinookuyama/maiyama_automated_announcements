@@ -285,20 +285,6 @@
             }
         }
 
-        function toggleMobile() {
-            const body = document.body;
-            const btn = document.getElementById("mobileToggleBtn");
-            if (body.classList.contains("mobile-mode")) {
-                body.classList.remove("mobile-mode");
-                btn.innerText = "モバイルモードに切り替え";
-                btn.style.backgroundColor = "#17a2b8";
-            } else {
-                body.classList.add("mobile-mode");
-                btn.innerText = "PCモードに切り替え";
-                btn.style.backgroundColor = "#6c757d";
-            }
-        }
-
         function resetControlButtons() {
             document.getElementById("nextBtn").style.display = "block";
             document.getElementById("doorLeftBtn").style.display = "none";
@@ -832,8 +818,12 @@
                 }
             }
 
-            arrText += "出入り口付近の方は、ドアの開閉にご注意ください。" + jpDoorText;
-            jpAudioList.push("audio/arr_door_caution.wav", jpDoorAudio);
+            if (!isLast) {
+                arrText += "出入り口付近の方は、ドアの開閉にご注意ください。";
+                jpAudioList.push("audio/arr_door_caution.wav");
+            }
+            arrText += jpDoorText;
+            jpAudioList.push(jpDoorAudio);
 
             const gapStations = ["shin_maiyama", "yasugo", "horiri", "chibe", "sakuranomori", "nakadai", "wattsu"];
             if (gapStations.includes(st.id)) {
