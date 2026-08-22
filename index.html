@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>車内自動放送装置</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #121212; color: #e0e0e0; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: sans-serif; padding: 20px; background-color: #121212; color: #e0e0e0; transition: background-color 0.3s, color 0.3s, padding 0.3s; }
         .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: background-color 0.3s, box-shadow 0.3s; }
         .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         label { display: inline-block; width: 110px; font-weight: bold; color: #ffffff; transition: color 0.3s; }
@@ -27,7 +28,7 @@
             line-height: 1.6; 
             white-space: pre-wrap; 
             box-sizing: border-box; 
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s, height 0.3s;
         }
         
         .en-text { color: #88ff88; font-size: 18px; transition: color 0.3s; } 
@@ -47,8 +48,24 @@
         .btn-manner:hover { background-color: #1e7e34; }
         .section-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #444; padding-bottom: 5px; margin-bottom: 15px; color: #ffffff; transition: color 0.3s, border-color 0.3s; }
 
-        .theme-switch-container { text-align: right; margin-bottom: 15px; }
-        #themeToggleBtn { background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+        .theme-switch-container { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .toggle-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+
+        /* モバイル切り替えボタン（一番下に独立配置） */
+        .mobile-toggle-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .mobile-toggle-btn:hover { background-color: #138496; }
 
         body.light-mode { background-color: #f4f6f9; color: #333333; }
         body.light-mode .panel { background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -57,15 +74,23 @@
         body.light-mode .section-title { color: #333333; border-bottom: 2px solid #ccc; }
         body.light-mode #display { background: #ffffff; color: #111111; border: 2px solid #ddd; }
         body.light-mode .en-text { color: #006600; }
+        body.light-mode .toggle-btn { background-color: #fff; color: #333; border-color: #ccc; }
 
-        .stop-checkboxes { display: flex; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin-top: 10px; }
-        .stop-checkbox-item { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+        body.mobile-mode { padding: 10px; }
+        body.mobile-mode .control-group { flex-direction: column; align-items: stretch; gap: 5px; }
+        body.mobile-mode label { width: auto; margin-bottom: 2px; }
+        body.mobile-mode select, body.mobile-mode button:not(.toggle-btn) { width: 100%; padding: 15px; font-size: 18px; box-sizing: border-box; }
+        body.mobile-mode .btn-swap { padding: 10px; font-size: 16px; }
+        body.mobile-mode #display { height: 350px; font-size: 18px; }
+        body.mobile-mode .en-text { font-size: 15px; }
+        body.mobile-mode .manual-grid { grid-template-columns: 1fr; }
+        body.mobile-mode #btnContainer { flex-direction: column; }
     </style>
 </head>
 <body>
 
     <div class="theme-switch-container">
-        <button id="themeToggleBtn" onclick="toggleTheme()">ライトモードに切り替え</button>
+        <button class="toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">ライトモードに切り替え</button>
     </div>
 
     <div class="panel" id="routePanel">
@@ -83,7 +108,6 @@
                 <option value="local">普通</option>
                 <option value="rapid">快速</option>
                 <option value="express">特急</option>
-                <option value="extra">臨時</option>
             </select>
         </div>
         <div class="control-group">
@@ -94,14 +118,6 @@
         <div class="control-group">
             <label for="destSelect">終着駅:</label>
             <select id="destSelect" onchange="handleStationChange()"></select>
-        </div>
-
-        <div class="control-group" id="extraStopsGroup" style="display: none; align-items: flex-start;">
-            <label>途中停車駅:</label>
-            <div style="flex: 1;">
-                <div style="font-size: 14px; margin-bottom: 5px;">※始発駅と終着駅の間の停車駅を手動で選択してください。</div>
-                <div class="stop-checkboxes" id="extraStopsContainer"></div>
-            </div>
         </div>
 
         <div class="control-group" id="afterArrivalGroup" style="display: flex;">
@@ -123,8 +139,8 @@
         <div class="section-title">自動放送ディスプレイ</div>
         
         <div style="position: absolute; top: 15px; right: 20px; display: flex; gap: 8px;">
-            <button id="backBtn" onclick="goBack()" style="padding: 6px 12px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">戻る</button>
-            <button id="stopBtn" onclick="handleStop()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">停止</button>
+            <button id="backBtn" onclick="goBack()" style="padding: 6px 12px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: auto;">戻る</button>
+            <button id="stopBtn" onclick="handleStop()" style="padding: 6px 12px; font-size: 14px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: auto;">停止</button>
         </div>
 
         <div id="display">設定を行ってください</div>
@@ -142,12 +158,27 @@
             <button class="btn-manual" onclick="playManual('お客様にお願いいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
-            
+        </div>
+    </div>
+
+    <div class="panel" id="mannerPanel" style="display: none;">
+        <div class="section-title">啓発放送（手動選択・いつでも再生可能）</div>
+        <div class="manual-grid">
             <button class="btn-manual btn-manner" onclick="playManual('この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。\n<span class=\'en-text\'>Please offer your seat to those who may need it.</span>', ['audio/manual_priority.wav', 1000, 'audio/manual_priority_en.wav'])">優先席</button>
-            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー</button>
+            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。歩きながらのスマートフォンの操作は、周りのお客様の迷惑になりますので、おやめください。\n<span class=\'en-text\'>Please refrain from using a smartphone while walking so as it will cause inconvenience to other customers.</span>', ['audio/manner_smartphone.wav', 1000, 'audio/manner_smartphone_en.wav'])">歩きスマホ</button>
+            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。座席にお座りの際は、一人でも多くのお客様が座れますよう、席は譲り合ってご利用ください。\n<span class=\'en-text\'>Please share the seats so that as many passengers as possible can sit down.</span>', ['audio/manner_yield.wav', 1000, 'audio/manner_yield_en.wav'])">譲り合い</button>
+            <button class="btn-manual btn-manner" onclick="playManual('ドア付近のお客様にお願いいたします。開くドアに手を触れていますと、戸袋に引き込まれる場合があります。開くドアには手を触れないよう、ご注意ください。\n<span class=\'en-text\'>Please keep hands clear of the opening doors as they make it caught in the door guards.</span>', ['audio/manner_door.wav', 1000, 'audio/manner_door_en.wav'])">ドア付近</button>
+            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。\n<span class=\'en-text\'>Please set your mobile phone to silent mode, and refrain from talking on the phone.</span>', ['audio/manual_manners.wav', 1000, 'audio/manual_manners_en.wav'])">車内マナー1</button>
+            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。ご乗車になりましたら、中ほどにお進みください。出入り口付近は、お降りになるお客様のためにお開けくださいますよう、ご協力をお願いいたします。\n<span class=\'en-text\'>Once you have boarded the train, please move further down the train car and vacate the area near the doors for passengers getting off. Thank you for cooperation.</span>', ['audio/manner_move_inside.wav', 1000, 'audio/manner_move_inside_en.wav'])">車内マナー2</button>
+            <button class="btn-manual btn-manner" onclick="playManual('お客様にお願いいたします。他のお客様のご迷惑となるような、大きな声での会話を控えていただくと共に、咳エチケットにご協力をお願いいたします。\n<span class=\'en-text\'>Please refrain from talking in a loud voice that may disturb other passengers, and cooperate with coughing etiquette.</span>', ['audio/manner_cough.wav', 1000, 'audio/manner_cough_en.wav'])">車内マナー3</button>
             <button class="btn-manual btn-manner" onclick="playManual('電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。\n<span class=\'en-text\'>Please hold on to the handrails or straps, as the train may stop suddenly.</span>', ['audio/manual_sudden_stop.wav', 1000, 'audio/manual_sudden_stop_en.wav'])">急停車</button>
             <button class="btn-manual btn-manner" onclick="playManual('お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。\n<span class=\'en-text\'>We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.</span>', ['audio/ad_boshu.wav', 1000, 'audio/ad_boshu_en.wav'])">広告募集</button>
         </div>
+    </div>
+
+    <!-- モバイルモード切り替えボタンを独立して配置 -->
+    <div style="padding-bottom: 20px;">
+        <button id="mobileToggleBtn" class="mobile-toggle-btn" onclick="toggleMobile()">モバイルモードに切り替え</button>
     </div>
 
     <script>
@@ -186,11 +217,12 @@
             horiri_h: { text: "堀理市役所はこちらです。", audio: "audio/fac_horiri.wav" },
             ohi: { text: "堀理県立総合医療センターはこちらです。", audio: "audio/fac_ohi.wav" },
             nakadai: { text: "成修大学はこちらです。", audio: "audio/fac_nakadai.wav" },
-            wattsu: { text: "鳩山税務署はこちらです。", audio: "audio/fac_wattsu.wav" }
+            wattsu: { text: "鳩山税務署はこちらです。", audio: "audio/fac_wattsu.wav" },
+            ezakano: { text: "江坂野異人町はこちらです。", audio: "audio/fac_ezakano.wav" }
         };
 
         const lineEnMap = { tozai: "Tozai Line", horiri: "Horiri Line" };
-        const typeEnMap = { local: "Local", rapid: "Rapid", express: "Express", extra: "Extra" };
+        const typeEnMap = { local: "Local", rapid: "Rapid", express: "Express" };
 
         let currentPlaylist = [];
         let currentIndex = 0;
@@ -247,15 +279,23 @@
             if (body.classList.contains("light-mode")) {
                 body.classList.remove("light-mode");
                 btn.innerText = "ライトモードに切り替え";
-                btn.style.backgroundColor = "#333";
-                btn.style.color = "#fff";
-                btn.style.borderColor = "#555";
             } else {
                 body.classList.add("light-mode");
                 btn.innerText = "ダークモードに切り替え";
-                btn.style.backgroundColor = "#fff";
-                btn.style.color = "#333";
-                btn.style.borderColor = "#ccc";
+            }
+        }
+
+        function toggleMobile() {
+            const body = document.body;
+            const btn = document.getElementById("mobileToggleBtn");
+            if (body.classList.contains("mobile-mode")) {
+                body.classList.remove("mobile-mode");
+                btn.innerText = "モバイルモードに切り替え";
+                btn.style.backgroundColor = "#17a2b8";
+            } else {
+                body.classList.add("mobile-mode");
+                btn.innerText = "PCモードに切り替え";
+                btn.style.backgroundColor = "#6c757d";
             }
         }
 
@@ -274,24 +314,17 @@
             if (line === "horiri") {
                 typeSelect.value = "local";
                 typeSelect.disabled = true;
-                Array.from(typeSelect.options).forEach(opt => {
-                    if(opt.value === "extra") opt.style.display = "none";
-                });
             } else {
                 typeSelect.disabled = false;
-                Array.from(typeSelect.options).forEach(opt => {
-                    opt.style.display = "block";
-                });
             }
 
             const currentType = typeSelect.value;
-            const filterType = currentType === "extra" ? "local" : currentType;
             
             originSelect.innerHTML = "";
             destSelect.innerHTML = "";
 
             stationsData[line].forEach(station => {
-                if (station.terminal && station.type[filterType]) {
+                if (station.terminal && station.type[currentType]) {
                     const option1 = document.createElement("option");
                     option1.value = station.id;
                     option1.text = station.name;
@@ -318,7 +351,6 @@
         }
         
         function handleStationChange() {
-            updateExtraStopsCheckboxes();
             updateAfterArrivalOptions();
         }
 
@@ -331,62 +363,6 @@
             destSelect.value = temp;
 
             handleStationChange();
-        }
-
-        function updateExtraStopsCheckboxes() {
-            const type = document.getElementById("typeSelect").value;
-            const group = document.getElementById("extraStopsGroup");
-            const container = document.getElementById("extraStopsContainer");
-            
-            if (type !== "extra") {
-                group.style.display = "none";
-                return;
-            }
-            
-            group.style.display = "flex";
-            container.innerHTML = "";
-            
-            const line = document.getElementById("lineSelect").value;
-            const originId = document.getElementById("originSelect").value;
-            const destId = document.getElementById("destSelect").value;
-            
-            if (originId === destId) return;
-            
-            const stations = stationsData[line];
-            const originIndex = stations.findIndex(s => s.id === originId);
-            const destIndex = stations.findIndex(s => s.id === destId);
-            
-            const startIndex = Math.min(originIndex, destIndex);
-            const endIndex = Math.max(originIndex, destIndex);
-            
-            let betweenStations = stations.slice(startIndex + 1, endIndex);
-            if (originIndex > destIndex) betweenStations.reverse();
-            
-            betweenStations.forEach(st => {
-                const div = document.createElement("div");
-                div.className = "stop-checkbox-item";
-                
-                const cb = document.createElement("input");
-                cb.type = "checkbox";
-                cb.id = "chk_" + st.id;
-                cb.value = st.id;
-                cb.className = "extra-stop-chk";
-                
-                const lbl = document.createElement("label");
-                lbl.htmlFor = "chk_" + st.id;
-                lbl.innerText = st.name;
-                lbl.style.width = "auto";
-                lbl.style.cursor = "pointer";
-                lbl.style.color = "inherit";
-                
-                div.appendChild(cb);
-                div.appendChild(lbl);
-                container.appendChild(div);
-            });
-            
-            if (betweenStations.length === 0) {
-                container.innerHTML = "<span style='font-size:14px;color:#999;'>※選択可能な途中駅がありません</span>";
-            }
         }
 
         function updateAfterArrivalOptions() {
@@ -428,20 +404,16 @@
             }
         }
 
-        // ▼ 今回追加・復活させた関数
         function updateMannerButtons() {
             const simpleMode = document.getElementById("simpleModeSelect").value;
-            const mannerBtns = document.querySelectorAll('.btn-manner');
-            mannerBtns.forEach(btn => {
-                // シンプルモードがオフ（自動で流れる）の場合は非表示、オンの場合は表示
-                if (simpleMode === "off") {
-                    btn.style.display = "none";
-                } else {
-                    btn.style.display = ""; 
-                }
-            });
+            const mannerPanel = document.getElementById("mannerPanel");
+            
+            if (simpleMode === "off") {
+                mannerPanel.style.display = "none";
+            } else {
+                mannerPanel.style.display = "block"; 
+            }
         }
-        // ▲ ここまで
 
         function setRoute() {
             const lineSelect = document.getElementById("lineSelect");
@@ -471,14 +443,9 @@
             let routeStations = stations.slice(startIndex, endIndex + 1);
             if (!isUpbound) routeStations.reverse();
 
-            if (type === "extra") {
-                const checkedIds = Array.from(document.querySelectorAll('.extra-stop-chk:checked')).map(cb => cb.value);
-                currentRouteStops = routeStations.filter(s => s.id === originId || s.id === destId || checkedIds.includes(s.id));
-            } else {
-                currentRouteStops = routeStations.filter(s => s.type[type]);
-            }
+            currentRouteStops = routeStations.filter(s => s.type[type]);
             
-            if (type !== "local" && routeStations.length === currentRouteStops.length && type !== "extra") {
+            if (type !== "local" && routeStations.length === currentRouteStops.length) {
                 alert("選択された区間には通過駅が存在しません。普通列車を選択してください。");
                 return;
             }
@@ -616,40 +583,46 @@
 
                 if (simpleMode === "off") {
                     let stationAds = [];
-                    const generalAds = [
-                        { id: "at", text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。", audio: ["audio/ad_at_audio.wav"] },
-                        { id: "wattsu", text: "専門スタッフが丁寧にサポート、地域最安値のワッツデンキは、東西線の池ノ上駅と中台駅からすぐです。", audio: ["audio/ad_wattsu_denki.wav"] },
-                        { id: "yag", text: "店舗経営のYAG株式会社は、那津駅南出口徒歩1分です。", audio: ["audio/ad_yag.wav"] }
-                    ];
+                    
+                    if (line === "tozai") {
+                        const generalAds = [
+                            { id: "at", text: "音響装置なら任せて安心のAT音響は、安小駅東口からすぐです。", audio: ["audio/ad_at_audio_v2.wav"], station: "yasugo" },
+                            { id: "wattsu", text: "専門スタッフが丁寧にサポート。家電のことなら、地域最安値のワッツデンキへ。", audio: ["audio/ad_wattsu_denki_v2.wav"], station: null },
+                            { id: "yag", text: "店舗経営のYAG株式会社は、那津駅南口徒歩1分です。", audio: ["audio/ad_yag_v2.wav"], station: "natsu" },
+                            { id: "hori", text: "インプラントのほーり歯科へおいでの方は、新舞山駅でお降りください。", audio: ["audio/ad_shin_maiyama_v2.wav"], station: "shin_maiyama" },
+                            { id: "mps", text: "楽曲制作はMPSオーディオセンターにお任せ。詳しくはMPS-ACオフィスまでお越しください。", audio: ["audio/ad_mps.wav"], station: null }
+                        ];
 
-                    let specificAd = null;
-                    if (st.id === "yasugo") specificAd = { id: "yasugo_special", text: "音響装置なら任せて安心のAT音響は、東西線安小駅でお降りください。MT安小ウルトラアリーナは次です。", audio: ["audio/ad_at_audio.wav", "audio/ad_mt_arena.wav"] };
-                    else if (st.id === "shin_maiyama") specificAd = { id: "shin_maiyama_sp", text: "インプラントのほーり歯科へおいでの方は、次でお降りください。", audio: ["audio/ad_shin_maiyama.wav"] };
-                    else if (st.id === "midoridai") specificAd = { id: "midoridai_sp", text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。", audio: ["audio/ad_midoridai.wav"] };
-                    else if (st.id === "ezakano") specificAd = { id: "ezakano_sp", text: "江坂野異人町へおいでの方は、こちらが便利です。", audio: ["audio/ad_ezakano.wav"] };
-                    else if (st.id === "natsu") specificAd = { id: "natsu_sp", text: "店舗経営のYAG株式会社は、那津駅南出口徒歩1分です。", audio: ["audio/ad_yag.wav"], excludeId: "yag", forceTwoAds: true };
+                        let specificAd = generalAds.find(ad => ad.station === st.id);
+                        let shouldPlayAd = false;
+                        let remainingChances = currentRouteStops.length - i; 
 
-                    let shouldPlayAd = false;
-                    let remainingChances = currentRouteStops.length - i; 
-
-                    if (!hasPlayedAd && remainingChances === 1) {
-                        shouldPlayAd = true; 
-                    } else if (Math.random() < 0.5) {
-                        shouldPlayAd = true; 
-                    }
-
-                    if (shouldPlayAd) {
-                        hasPlayedAd = true;
                         if (specificAd) {
-                            stationAds.push(specificAd);
-                            if (st.id !== "yasugo" && (specificAd.forceTwoAds || Math.random() < 0.3)) {
-                                const availableGeneralAds = generalAds.filter(ad => ad.id !== specificAd.excludeId);
-                                const randomGeneralAd = availableGeneralAds[Math.floor(Math.random() * availableGeneralAds.length)];
-                                stationAds.push(randomGeneralAd);
+                            shouldPlayAd = true;
+                        } else if (!hasPlayedAd && remainingChances === 1) {
+                            shouldPlayAd = true; 
+                        } else if (Math.random() < 0.5) {
+                            shouldPlayAd = true; 
+                        }
+
+                        if (shouldPlayAd) {
+                            hasPlayedAd = true;
+                            if (specificAd) {
+                                stationAds.push(specificAd);
+                                let availableAds = generalAds.filter(ad => ad.id !== specificAd.id);
+                                let randomAd = availableAds[Math.floor(Math.random() * availableAds.length)];
+                                stationAds.push(randomAd);
+                            } else {
+                                let shuffledAds = [...generalAds].sort(() => 0.5 - Math.random());
+                                stationAds = shuffledAds.slice(0, 2);
                             }
-                        } else {
-                            let shuffledAds = [...generalAds].sort(() => 0.5 - Math.random());
-                            stationAds = shuffledAds.slice(0, 2);
+                        }
+                    } else if (line === "horiri") {
+                        if (st.id === "midoridai") {
+                            stationAds.push({
+                                text: "未来の私に、きっと誇れる今日を。堀理大学 みどり台キャンパスはこちらです。",
+                                audio: ["audio/ad_midoridai.wav"]
+                            });
                         }
                     }
 
@@ -660,7 +633,12 @@
 
                     const randomPhrases = [
                         { jpText: "この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。", enText: "Please offer your seat to those who may need it.", jpAudio: "audio/manual_priority.wav", enAudio: "audio/manual_priority_en.wav" },
+                        { jpText: "お客様にお願いいたします。歩きながらのスマートフォンの操作は、周りのお客様の迷惑になりますので、おやめください。", enText: "Please refrain from using a smartphone while walking so as it will cause inconvenience to other customers.", jpAudio: "audio/manner_smartphone.wav", enAudio: "audio/manner_smartphone_en.wav" },
+                        { jpText: "お客様にお願いいたします。座席にお座りの際は、一人でも多くのお客様が座れますよう、席は譲り合ってご利用ください。", enText: "Please share the seats so that as many passengers as possible can sit down.", jpAudio: "audio/manner_yield.wav", enAudio: "audio/manner_yield_en.wav" },
+                        { jpText: "ドア付近のお客様にお願いいたします。開くドアに手を触れていますと、戸袋に引き込まれる場合があります。開くドアには手を触れないよう、ご注意ください。", enText: "Please keep hands clear of the opening doors as they make it caught in the door guards.", jpAudio: "audio/manner_door.wav", enAudio: "audio/manner_door_en.wav" },
                         { jpText: "お客様にお願いいたします。車内は禁煙です。また、携帯電話をマナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。", enText: "Please set your mobile phone to silent mode, and refrain from talking on the phone.", jpAudio: "audio/manual_manners.wav", enAudio: "audio/manual_manners_en.wav" },
+                        { jpText: "お客様にお願いいたします。ご乗車になりましたら、中ほどにお進みください。出入り口付近は、お降りになるお客様のためにお開けくださいますよう、ご協力をお願いいたします。", enText: "Once you have boarded the train, please move further down the train car and vacate the area near the doors for passengers getting off. Thank you for cooperation.", jpAudio: "audio/manner_move_inside.wav", enAudio: "audio/manner_move_inside_en.wav" },
+                        { jpText: "お客様にお願いいたします。他のお客様のご迷惑となるような、大きな声での会話を控えていただくと共に、咳エチケットにご協力をお願いいたします。", enText: "Please refrain from talking in a loud voice that may disturb other passengers, and cooperate with coughing etiquette.", jpAudio: "audio/manner_cough.wav", enAudio: "audio/manner_cough_en.wav" },
                         { jpText: "電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。", enText: "Please hold on to the handrails or straps, as the train may stop suddenly.", jpAudio: "audio/manual_sudden_stop.wav", enAudio: "audio/manual_sudden_stop_en.wav" },
                         { jpText: "お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
                     ];
@@ -725,7 +703,7 @@
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             audioQueue = [...audios];
-            document.getElementById("display").innerHTML = "【選択放送】<br>" + text;
+            document.getElementById("display").innerHTML = "【手動再生】<br>" + text;
             playTimeout = setTimeout(playQueue, 1000);
         }
 
@@ -841,8 +819,8 @@
                     }
                 }
                 
-                arrText += "本日も、舞山市交通局をご利用くださいまして、ありがとうございました。お忘れ物のないよう、ご注意ください。" + jpDoorText;
-                jpAudioList.push("audio/end_fixed.wav", jpDoorAudio);
+                arrText += "本日も、舞山市交通局をご利用くださいまして、ありがとうございました。お忘れ物のないよう、ご注意ください。";
+                jpAudioList.push("audio/end_fixed.wav");
 
             } else {
                 arrText = `${baseName}、${baseName}${subName}。`;
@@ -852,10 +830,10 @@
                     arrText += "堀理線はお乗り換えです。";
                     jpAudioList.push("audio/transfer_horiri.wav");
                 }
-
-                arrText += jpDoorText;
-                jpAudioList.push(jpDoorAudio);
             }
+
+            arrText += "出入り口付近の方は、ドアの開閉にご注意ください。" + jpDoorText;
+            jpAudioList.push("audio/arr_door_caution.wav", jpDoorAudio);
 
             const gapStations = ["shin_maiyama", "yasugo", "horiri", "chibe", "sakuranomori", "nakadai", "wattsu"];
             if (gapStations.includes(st.id)) {
@@ -913,8 +891,7 @@
         }
 
         updateForm();
-        updateMannerButtons(); // ← 初期読み込み時にボタンの表示状態を設定
+        updateMannerButtons();
     </script>
-
 </body>
 </html>
