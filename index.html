@@ -101,7 +101,7 @@
         </div>
         <div class="control-group">
             <label for="originSelect">始発駅:</label>
-            <select id="originSelect" onchange="handleStationChange()"></select>
+            <select id="originSelect" onchange="updateDestOptions()"></select>
             <button class="btn-swap" type="button" onclick="swapStations()">⇅ 反転</button>
         </div>
         <div class="control-group">
@@ -195,7 +195,7 @@
                 { id: "horiri", name: "堀理", nameEn: "Horiri", number: "T10", type: { local: true, rapid: true, express: true, extra: true }, terminal: true, defaultDoor: "left" },
                 { id: "sanya", name: "山谷", nameEn: "Sanya", number: "T11", type: { local: true, rapid: false, express: false, extra: false }, terminal: false, defaultDoor: "left", fixedDoor: true },
                 { id: "ohi", name: "大日古部", nameEn: "Ohi/Furube", number: "T12", type: { local: true, rapid: false, express: false, extra: true }, terminal: true, defaultDoor: "left" },
-                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false, extra: true }, terminal: true, defaultDoor: "right", fixedDoor: true },
+                { id: "nakadai", name: "中台", nameEn: "Nakadai", number: "T13", type: { local: true, rapid: true, express: false, extra: true }, terminal: false, defaultDoor: "right", fixedDoor: true },
                 { id: "wattsu", name: "輪厚", nameEn: "Wattsu", number: "T14", type: { local: true, rapid: true, express: true, extra: true }, terminal: true, defaultDoor: "left" }
             ],
             horiri: [
@@ -294,8 +294,6 @@
             const line = document.getElementById("lineSelect").value;
             const typeSelect = document.getElementById("typeSelect");
             const originSelect = document.getElementById("originSelect");
-            const destSelect = document.getElementById("destSelect");
-            const customStopGroup = document.getElementById("customStopGroup");
 
             if (line === "horiri") {
                 typeSelect.value = "local";
@@ -305,43 +303,78 @@
             }
 
             const currentType = typeSelect.value;
-            
-            if (currentType === "extra") {
-                customStopGroup.style.display = "flex";
-            } else {
-                customStopGroup.style.display = "none";
-            }
+            const customStopGroup = document.getElementById("customStopGroup");
+            customStopGroup.style.display = (currentType === "extra") ? "flex" : "none";
 
+            const currentOrigin = originSelect.value;
             originSelect.innerHTML = "";
-            destSelect.innerHTML = "";
 
             stationsData[line].forEach(station => {
                 if (station.terminal && station.type[currentType]) {
-                    const option1 = document.createElement("option");
-                    option1.value = station.id;
-                    option1.text = station.name;
-                    originSelect.appendChild(option1);
-
-                    const option2 = document.createElement("option");
-                    option2.value = station.id;
-                    option2.text = station.name;
-                    destSelect.appendChild(option2);
+                    const option = document.createElement("option");
+                    option.value = station.id;
+                    option.text = station.name;
+                    originSelect.appendChild(option);
                 }
             });
+
+            if (Array.from(originSelect.options).some(opt => opt.value === currentOrigin)) {
+                originSelect.value = currentOrigin;
+            } else if (originSelect.options.length > 0) {
+                originSelect.selectedIndex = 0;
+            }
+
+            updateDestOptions();
+        }
+
+        function updateDestOptions() {
+            const line = document.getElementById("lineSelect").value;
+            const type = document.getElementById("typeSelect").value;
+            const originId = document.getElementById("originSelect").value;
+            const destSelect = document.getElementById("destSelect");
+            const currentDest = destSelect.value;
+
+            destSelect.innerHTML = "";
+
+            const stations = stationsData[line];
+            const originIndex = stations.findIndex(s => s.id === originId);
             
-            if (destSelect.options.length > 0) {
-                if (line === "horiri") {
-                    originSelect.value = "ezakano";
-                    destSelect.value = "horiri_h";
-                } else {
-                    originSelect.selectedIndex = 0;
-                    destSelect.selectedIndex = destSelect.options.length - 1;
+            // 除外判定用に、各対象駅のインデックスを動的に取得
+            const megamaIdx = stations.findIndex(s => s.id === "megama");
+            const ohiIdx = stations.findIndex(s => s.id === "ohi");
+
+            stations.forEach((station, index) => {
+                if (!station.terminal || !station.type[type] || station.id === originId) {
+                    return;
                 }
+
+                if (line === "tozai") {
+                    // ○輪厚方面→芽蒲（芽蒲より輪厚寄りの駅を始発とする芽蒲行を削除）
+                    if (station.id === "megama" && originIndex > megamaIdx) return;
+                    // ○輪厚方面→大日古部（大日古部より輪厚寄りの駅を始発とする大日古部行を削除）
+                    if (station.id === "ohi" && originIndex > ohiIdx) return;
+                    // ○大日古部→輪厚方面（大日古部始発で大日古部より輪厚寄りの駅を終着とするものを削除）
+                    if (originId === "ohi" && index > ohiIdx) return;
+                }
+
+                const option = document.createElement("option");
+                option.value = station.id;
+                option.text = station.name;
+                destSelect.appendChild(option);
+            });
+
+            // 初期選択の制御：前回の選択値を保持するか、可能な限り輪厚行を優先
+            if (Array.from(destSelect.options).some(opt => opt.value === currentDest)) {
+                destSelect.value = currentDest;
+            } else if (Array.from(destSelect.options).some(opt => opt.value === "wattsu")) {
+                destSelect.value = "wattsu";
+            } else if (destSelect.options.length > 0) {
+                destSelect.selectedIndex = 0;
             }
 
             handleStationChange();
         }
-        
+
         function handleStationChange() {
             updateAfterArrivalOptions();
             updateCustomStops();
@@ -396,12 +429,19 @@
         function swapStations() {
             const originSelect = document.getElementById("originSelect");
             const destSelect = document.getElementById("destSelect");
-            
-            const temp = originSelect.value;
-            originSelect.value = destSelect.value;
-            destSelect.value = temp;
 
-            handleStationChange();
+            const targetOrigin = destSelect.value;
+            const targetDest = originSelect.value;
+
+            if (Array.from(originSelect.options).some(opt => opt.value === targetOrigin)) {
+                originSelect.value = targetOrigin;
+            }
+            updateDestOptions();
+
+            if (Array.from(destSelect.options).some(opt => opt.value === targetDest)) {
+                destSelect.value = targetDest;
+                handleStationChange();
+            }
         }
 
         function updateAfterArrivalOptions() {
@@ -417,23 +457,18 @@
 
             const stations = stationsData[line];
             const originIndex = stations.findIndex(s => s.id === originId);
-            const destIndex = stations.findIndex(s => s.id === destId);
-            const isUpbound = originIndex < destIndex;
+            const hoririIdx = stations.findIndex(s => s.id === "horiri");
 
             let canTurnaround = true;
-            if (line === "tozai" && !isUpbound && ["megama", "horiri", "ohi", "nakadai"].includes(destId)) {
-                canTurnaround = false;
+            if (line === "tozai") {
+                // ○輪厚方面→堀理（堀理より輪厚寄りの駅を始発とする堀理行の到着後折り返しを廃止）
+                if (destId === "horiri" && originIndex > hoririIdx) {
+                    canTurnaround = false;
+                }
             }
 
-            const isLineEnd = (destIndex === 0 || destIndex === stations.length - 1);
-
-            if (isLineEnd) {
+            if (canTurnaround) {
                 select.add(new Option("折り返す", "turnaround"));
-            } else if (!canTurnaround) {
-                select.add(new Option("引き続き同方面の別種別として運転する", "continue_same_direction"));
-            } else {
-                select.add(new Option("折り返す", "turnaround"));
-                select.add(new Option("引き続き同方面の別種別として運転する", "continue_same_direction"));
             }
 
             if (Array.from(select.options).some(opt => opt.value === currentVal)) {
@@ -455,27 +490,24 @@
         }
 
         function setRoute() {
+            // （以降の放送生成ロジックは前回同様のため省略せずすべて記載）
             const lineSelect = document.getElementById("lineSelect");
             const typeSelect = document.getElementById("typeSelect");
             const originSelect = document.getElementById("originSelect");
             const destSelect = document.getElementById("destSelect");
             const simpleMode = document.getElementById("simpleModeSelect").value;
+            const afterArrivalMode = document.getElementById("afterArrivalSelect").value;
 
             const line = lineSelect.value;
             const type = typeSelect.value;
             const originId = originSelect.value;
             const destId = destSelect.value;
 
-            if (originId === destId) {
-                alert("始発駅と終着駅が同じです。異なる駅を選択してください。");
-                return;
-            }
-
             const stations = stationsData[line];
             const originIndex = stations.findIndex(s => s.id === originId);
             const destIndex = stations.findIndex(s => s.id === destId);
-
             const isUpbound = originIndex < destIndex;
+
             const startIndex = Math.min(originIndex, destIndex);
             const endIndex = Math.max(originIndex, destIndex);
 
@@ -489,15 +521,10 @@
             } else {
                 currentRouteStops = routeStations.filter(s => s.type[type]);
             }
-            
-            if (type !== "local" && routeStations.length === currentRouteStops.length) {
-                alert("選択された区間には通過駅が存在しません。普通列車を選択してください。");
-                return;
-            }
 
             currentLine = line;
             globalIsUpbound = isUpbound;
-            globalAfterArrival = document.getElementById("afterArrivalSelect").value;
+            globalAfterArrival = afterArrivalMode;
             globalTransferCut = document.getElementById("transferCutSelect").value === "on";
 
             const lineName = lineSelect.options[lineSelect.selectedIndex].text;
@@ -756,7 +783,17 @@
         }
 
         function showTrackSelection(st, isLast) {
-            if (st.fixedDoor) {
+            if (st.id === "ohi") {
+                if (isLast && globalAfterArrival === "kaisou") {
+                    
+                } else if (isLast && globalAfterArrival === "turnaround") {
+                    playArrival(st, isLast, "right");
+                    return;
+                } else {
+                    playArrival(st, isLast, "left");
+                    return;
+                }
+            } else if (st.fixedDoor) {
                 playArrival(st, isLast, st.defaultDoor);
                 return;
             }
@@ -808,7 +845,7 @@
                 let transferAdded = false;
                 const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu");
 
-                if (!globalTransferCut && line === "tozai" && playTransfer && globalAfterArrival !== "continue_same_direction") {
+                if (!globalTransferCut && line === "tozai" && playTransfer) {
                     if (st.id === "yasugo") {
                         if (globalIsUpbound) {
                             arrText += "芽蒲・輪厚方面は、お乗り換えです。";
@@ -942,8 +979,14 @@
             }
         }
 
-        updateForm();
-        updateMannerButtons();
+        // 初期化処理
+        window.onload = () => {
+            document.getElementById("lineSelect").value = "tozai";
+            document.getElementById("typeSelect").value = "local";
+            document.getElementById("originSelect").value = "maiyama";
+            updateForm();
+            updateMannerButtons();
+        };
     </script>
 </body>
 </html>
