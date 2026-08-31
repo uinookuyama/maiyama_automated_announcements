@@ -8,7 +8,7 @@
         body { font-family: sans-serif; padding: 20px; background-color: #121212; color: #e0e0e0; transition: background-color 0.3s, color 0.3s, padding 0.3s; }
         .panel { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: background-color 0.3s, box-shadow 0.3s; }
         .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        label { display: inline-block; width: 110px; font-weight: bold; color: #ffffff; transition: color 0.3s; }
+        label { display: inline-block; width: 130px; font-weight: bold; color: #ffffff; transition: color 0.3s; }
         select { padding: 5px; font-size: 16px; min-width: 150px; background-color: #2d2d2d; color: #ffffff; border: 1px solid #444; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; border: none; }
         .btn-ready { background-color: #218838; color: white; margin-top: 10px; }
@@ -127,6 +127,13 @@
                 <option value="on">オン（最小限の案内のみ）</option>
             </select>
         </div>
+        <div class="control-group">
+            <label for="transferCutSelect">乗換案内カット:</label>
+            <select id="transferCutSelect">
+                <option value="off">オフ（通常）</option>
+                <option value="on">オン（深夜帯・プラ鯖用）</option>
+            </select>
+        </div>
         <button class="btn-ready" onclick="setRoute()">この設定で放送を準備する</button>
     </div>
 
@@ -194,7 +201,7 @@
             horiri: [
                 { id: "horiri_h", name: "堀理", nameEn: "Horiri", number: "H08", type: { local: true }, terminal: true, defaultDoor: "left" },
                 { id: "chibe", name: "知部", nameEn: "Chibe", number: "H09", type: { local: true }, terminal: false, defaultDoor: "right", fixedDoor: true },
-                { id: "sakuranomori", name: "桜ノ杜", nameEn: "Sakuranomori", number: "H10", type: { local: true }, terminal: false, defaultDoor: "left" },
+                { id: "sakuranomori", name: "桜ノ杜", nameEn: "Sakuranomori", number: "H10", type: { local: true }, terminal: true, defaultDoor: "left" },
                 { id: "midoridai", name: "みどり台", nameEn: "Midoridai", number: "H11", type: { local: true }, terminal: false, defaultDoor: "left", fixedDoor: true },
                 { id: "ezakano", name: "江坂野", nameEn: "Ezakano", number: "H12", type: { local: true }, terminal: true, defaultDoor: "right" }
             ]
@@ -226,6 +233,7 @@
 
         let globalIsUpbound = true;
         let globalAfterArrival = "kaisou";
+        let globalTransferCut = false;
 
         function stopAudio() {
             clearTimeout(playTimeout);
@@ -490,6 +498,7 @@
             currentLine = line;
             globalIsUpbound = isUpbound;
             globalAfterArrival = document.getElementById("afterArrivalSelect").value;
+            globalTransferCut = document.getElementById("transferCutSelect").value === "on";
 
             const lineName = lineSelect.options[lineSelect.selectedIndex].text;
             const lineEn = lineEnMap[line];
@@ -602,12 +611,14 @@
                     enAudioList.push(`audio/next_${st.id}_en.wav`);
                 }
 
-                if (line === "tozai" && st.id === "horiri") {
-                    jpText += "堀理線はお乗り換えです。";
-                    jpAudioList.push("audio/transfer_horiri.wav");
-                } else if (line === "horiri" && st.id === "horiri_h") {
-                    jpText += "東西線はお乗り換えです。";
-                    jpAudioList.push("audio/transfer_tozai.wav");
+                if (!globalTransferCut) {
+                    if (line === "tozai" && st.id === "horiri") {
+                        jpText += "堀理線はお乗り換えです。";
+                        jpAudioList.push("audio/transfer_horiri.wav");
+                    } else if (line === "horiri" && st.id === "horiri_h") {
+                        jpText += "東西線はお乗り換えです。";
+                        jpAudioList.push("audio/transfer_tozai.wav");
+                    }
                 }
 
                 if (facilityData[st.id]) {
@@ -797,7 +808,7 @@
                 let transferAdded = false;
                 const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu");
 
-                if (line === "tozai" && playTransfer && globalAfterArrival !== "continue_same_direction") {
+                if (!globalTransferCut && line === "tozai" && playTransfer && globalAfterArrival !== "continue_same_direction") {
                     if (st.id === "yasugo") {
                         if (globalIsUpbound) {
                             arrText += "芽蒲・輪厚方面は、お乗り換えです。";
@@ -846,7 +857,7 @@
                     }
                 }
 
-                if (!transferAdded) {
+                if (!transferAdded && !globalTransferCut) {
                     if (line === "horiri" && st.id === "horiri_h") {
                         arrText += "東西線はお乗り換えです。";
                         jpAudioList.push("audio/transfer_tozai.wav");
@@ -863,7 +874,7 @@
                 arrText = `${baseName}、${baseName}${subName}。`;
                 jpAudioList.push(`audio/arr_${st.id}.wav`);
                 
-                if (line === "tozai" && st.id === "horiri") {
+                if (!globalTransferCut && line === "tozai" && st.id === "horiri") {
                     arrText += "堀理線はお乗り換えです。";
                     jpAudioList.push("audio/transfer_horiri.wav");
                 }
