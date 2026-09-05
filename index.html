@@ -160,6 +160,7 @@
             <button class="btn-manual" onclick="playManual('お客様にお願いいたします。ただいま、停止信号です。しばらくお待ちください。\n<span class=\'en-text\'>We are currently stopped by a red signal. Please wait a moment.</span>', ['audio/manual_stop_signal.wav', 1000, 'audio/manual_stop_signal_en.wav'])">停止信号</button>
             <button class="btn-manual" onclick="playManual('まもなく発車いたします。ご乗車のままお待ちください。\n<span class=\'en-text\'>We will be departing shortly.</span>', ['audio/manual_depart.wav', 1000, 'audio/manual_depart_en.wav'])">発車</button>
             <button class="btn-manual" onclick="playManual('車両の停止位置を調整いたします。ドアが開くまで、そのままでお待ちください。\n<span class=\'en-text\'>We will be adjusting the stop position of the train. Please wait a moment until the doors open.</span>', ['audio/manual_adjust_stop.wav', 1000, 'audio/manual_adjust_stop_en.wav'])">停止位置調整</button>
+            <button class="btn-manual" onclick="playManual('ドアが閉まります。ご注意ください。', ['audio/manual_door_close.wav'])">戸締放送</button>
         </div>
     </div>
 
@@ -353,7 +354,6 @@
             const stations = stationsData[line];
             const originIndex = stations.findIndex(s => s.id === originId);
             
-            // 除外判定用に、各対象駅のインデックスを動的に取得
             const megamaIdx = stations.findIndex(s => s.id === "megama");
             const ohiIdx = stations.findIndex(s => s.id === "ohi");
 
@@ -363,11 +363,8 @@
                 }
 
                 if (line === "tozai") {
-                    // ○輪厚方面→芽蒲（芽蒲より輪厚寄りの駅を始発とする芽蒲行を削除）
                     if (station.id === "megama" && originIndex > megamaIdx) return;
-                    // ○輪厚方面→大日古部（大日古部より輪厚寄りの駅を始発とする大日古部行を削除）
                     if (station.id === "ohi" && originIndex > ohiIdx) return;
-                    // ○大日古部→輪厚方面（大日古部始発で大日古部より輪厚寄りの駅を終着とするものを削除）
                     if (originId === "ohi" && index > ohiIdx) return;
                 }
 
@@ -377,7 +374,6 @@
                 destSelect.appendChild(option);
             });
 
-            // 初期選択の制御：前回の選択値を保持するか、可能な限り輪厚行を優先
             if (Array.from(destSelect.options).some(opt => opt.value === currentDest)) {
                 destSelect.value = currentDest;
             } else if (Array.from(destSelect.options).some(opt => opt.value === "wattsu")) {
@@ -477,7 +473,6 @@
 
             let canTurnaround = true;
             if (line === "tozai") {
-                // ○輪厚方面→堀理（堀理より輪厚寄りの駅を始発とする堀理行の到着後折り返しを廃止）
                 if (destId === "horiri" && originIndex > hoririIdx) {
                     canTurnaround = false;
                 }
@@ -487,8 +482,10 @@
                 select.add(new Option("折り返す", "turnaround"));
             }
 
-            if (Array.from(select.options).some(opt => opt.value === currentVal)) {
+            if (Array.from(select.options).some(opt => opt.value === currentVal) && currentVal) {
                 select.value = currentVal;
+            } else if (line === "tozai" && canTurnaround) {
+                select.value = "turnaround";
             } else {
                 select.value = "kaisou";
             }
@@ -506,7 +503,6 @@
         }
 
         function setRoute() {
-            // （以降の放送生成ロジックは前回同様のため省略せずすべて記載）
             const lineSelect = document.getElementById("lineSelect");
             const typeSelect = document.getElementById("typeSelect");
             const originSelect = document.getElementById("originSelect");
@@ -731,7 +727,7 @@
                         { jpText: "お客様にお願いいたします。ご乗車になりましたら、中ほどにお進みください。出入り口付近は、お降りになるお客様のためにお開けくださいますよう、ご協力をお願いいたします。", enText: "Once you have boarded the train, please move further down the train car and vacate the area near the doors for passengers getting off. Thank you for cooperation.", jpAudio: "audio/manner_move_inside.wav", enAudio: "audio/manner_move_inside_en.wav" },
                         { jpText: "お客様にお願いいたします。他のお客様のご迷惑となるような、大きな声での会話を控えていただくと共に、咳エチケットにご協力をお願いいたします。", enText: "Please refrain from talking in a loud voice that may disturb other passengers, and cooperate with coughing etiquette.", jpAudio: "audio/manner_cough.wav", enAudio: "audio/manner_cough_en.wav" },
                         { jpText: "電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、お近くの吊り革、手すりなどにお掴まりください。", enText: "Please hold on to the handrails or straps, as the train may stop suddenly.", jpAudio: "audio/manual_sudden_stop.wav", enAudio: "audio/manual_sudden_stop_en.wav" },
-                        { jpText: "お客様にお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
+                        { jpText: "お客様におお知らせいたします。交通局では、電車内および駅構内に掲出する広告を募集しております。詳しくは、舞山市交通局公式Discordサーバーをご覧ください。", enText: "We are currently accepting applications for advertisements inside trains and at stations. For more details, please visit the official Maiyama Transportation Discord server.", jpAudio: "audio/ad_boshu.wav", enAudio: "audio/ad_boshu_en.wav" }
                     ];
                     const randomPhrase = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
@@ -861,52 +857,65 @@
                 let transferAdded = false;
                 const playTransfer = (st.id !== "maiyama" && st.id !== "wattsu");
 
-                if (!globalTransferCut && line === "tozai" && playTransfer) {
-                    if (st.id === "yasugo") {
-                        if (globalIsUpbound) {
-                            arrText += "芽蒲・輪厚方面は、お乗り換えです。";
-                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_wattsu.wav");
-                        } else {
-                            arrText += "舞山方面は、お乗り換えです。";
-                            jpAudioList.push("audio/transfer_maiyama.wav");
+                if (!globalTransferCut) {
+                    if (line === "tozai" && playTransfer) {
+                        if (st.id === "yasugo") {
+                            if (globalIsUpbound) {
+                                arrText += "芽蒲・輪厚方面は、お乗り換えです。";
+                                jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_wattsu.wav");
+                            } else {
+                                arrText += "舞山方面は、お乗り換えです。";
+                                jpAudioList.push("audio/transfer_maiyama.wav");
+                            }
+                            transferAdded = true;
+                        } else if (st.id === "megama") {
+                            if (globalIsUpbound) {
+                                arrText += "堀理・輪厚方面は、お乗り換えです。";
+                                jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
+                            } else {
+                                arrText += "舞山方面は、お乗り換えです。";
+                                jpAudioList.push("audio/transfer_maiyama.wav");
+                            }
+                            transferAdded = true;
+                        } else if (st.id === "natsu") {
+                            if (globalIsUpbound) {
+                                arrText += "堀理・輪厚方面は、お乗り換えです。";
+                                jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
+                            } else {
+                                arrText += "芽蒲・舞山方面は、お乗り換えです。";
+                                jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama.wav");
+                            }
+                            transferAdded = true;
+                        } else if (st.id === "horiri") {
+                            if (globalIsUpbound) {
+                                arrText += "輪厚方面と、堀理線はお乗り換えです。";
+                                jpAudioList.push("audio/transfer_wattsu_and.wav", 150, "audio/transfer_horiri.wav");
+                            } else {
+                                arrText += "芽蒲・舞山方面と、堀理線はお乗り換えです。";
+                                jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama_and.wav", 150, "audio/transfer_horiri.wav");
+                            }
+                            transferAdded = true;
+                        } else if (st.id === "ohi") {
+                            if (globalIsUpbound) {
+                                arrText += "輪厚方面は、お乗り換えです。";
+                                jpAudioList.push("audio/transfer_wattsu.wav");
+                            } else {
+                                arrText += "堀理・舞山方面は、お乗り換えです。";
+                                jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_maiyama.wav");
+                            }
+                            transferAdded = true;
                         }
-                        transferAdded = true;
-                    } else if (st.id === "megama") {
-                        if (globalIsUpbound) {
-                            arrText += "堀理・輪厚方面は、お乗り換えです。";
-                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
-                        } else {
-                            arrText += "舞山方面は、お乗り換えです。";
-                            jpAudioList.push("audio/transfer_maiyama.wav");
+                    } else if (line === "horiri") {
+                        if (st.id === "sakuranomori") {
+                            if (globalIsUpbound) {
+                                arrText += "江坂野方面は、お乗り換えです。";
+                                jpAudioList.push("audio/transfer_ezakano.wav");
+                            } else {
+                                arrText += "堀理方面は、お乗り換えです。";
+                                jpAudioList.push("audio/transfer_horiri_bound.wav");
+                            }
+                            transferAdded = true;
                         }
-                        transferAdded = true;
-                    } else if (st.id === "natsu") {
-                        if (globalIsUpbound) {
-                            arrText += "堀理・輪厚方面は、お乗り換えです。";
-                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_wattsu.wav");
-                        } else {
-                            arrText += "芽蒲・舞山方面は、お乗り換えです。";
-                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama.wav");
-                        }
-                        transferAdded = true;
-                    } else if (st.id === "horiri") {
-                        if (globalIsUpbound) {
-                            arrText += "輪厚方面と、堀理線はお乗り換えです。";
-                            jpAudioList.push("audio/transfer_wattsu_and.wav", 150, "audio/transfer_horiri.wav");
-                        } else {
-                            arrText += "芽蒲・舞山方面と、堀理線はお乗り換えです。";
-                            jpAudioList.push("audio/stop_megama.wav", 150, "audio/transfer_maiyama_and.wav", 150, "audio/transfer_horiri.wav");
-                        }
-                        transferAdded = true;
-                    } else if (st.id === "ohi") {
-                        if (globalIsUpbound) {
-                            arrText += "輪厚方面は、お乗り換えです。";
-                            jpAudioList.push("audio/transfer_wattsu.wav");
-                        } else {
-                            arrText += "堀理・舞山方面は、お乗り換えです。";
-                            jpAudioList.push("audio/stop_horiri.wav", 150, "audio/transfer_maiyama.wav");
-                        }
-                        transferAdded = true;
                     }
                 }
 
